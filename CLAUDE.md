@@ -42,3 +42,10 @@ uv run mypy pythaw
 - `chore:` その他（CI/CD, 依存関係、設定ファイル等）
 
 **subject:** 50文字以内、文末ピリオドなし
+
+## ブランチ戦略
+
+- `main` ブランチには直接コミットしない
+- 作業時は必ず feature ブランチを切って対応する
+  - 命名規則: `<type>/<短い説明>` (例: `feat/add-analyzer`, `fix/ci-test-failure`)
+- 作業完了後は PR を作成し、レビュー後に `main` へマージする

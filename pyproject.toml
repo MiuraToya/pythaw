@@ -1,0 +1,49 @@
+[project]
+name = "pythaw"
+version = "0.1.0"
+description = "A static analysis CLI tool to detect heavy initialization inside AWS Lambda Python handlers"
+readme = "README.md"
+authors = [
+    { name = "MiuraToya" }
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+pythaw = "pythaw.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest>=9.0.2",
+    "ruff>=0.15.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.8,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "."
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D",       # pydocstyle — ドキュメント規約は別途決める
+    "ANN",     # flake8-annotations — mypy strict でカバー
+    "COM812",  # trailing comma — formatter と競合
+    "ISC001",  # implicit string concat — formatter と競合
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # assert の使用を許可
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

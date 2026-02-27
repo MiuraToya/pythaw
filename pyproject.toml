@@ -16,6 +16,7 @@ pythaw = "pythaw.cli:main"
 dev = [
     "mypy>=1.19.1",
     "pytest>=9.0.2",
+    "pytest-cov>=6.2.1",
     "ruff>=0.15.4",
 ]
 

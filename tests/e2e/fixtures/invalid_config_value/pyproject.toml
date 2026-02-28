@@ -1,0 +1,2 @@
+[tool.pythaw]
+handler_patterns = "not_a_list"

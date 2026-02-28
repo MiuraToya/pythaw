@@ -2,11 +2,24 @@ from __future__ import annotations
 
 from pythaw.formatters._base import Formatter
 from pythaw.formatters.concise import ConciseFormatter
+from pythaw.formatters.github import GithubFormatter
+from pythaw.formatters.json import JsonFormatter
+from pythaw.formatters.sarif import SarifFormatter
 
-__all__ = ["ConciseFormatter", "Formatter", "get_formatter"]
+__all__ = [
+    "ConciseFormatter",
+    "Formatter",
+    "GithubFormatter",
+    "JsonFormatter",
+    "SarifFormatter",
+    "get_formatter",
+]
 
 FORMATTERS: dict[str, Formatter] = {
     "concise": ConciseFormatter(),
+    "json": JsonFormatter(),
+    "github": GithubFormatter(),
+    "sarif": SarifFormatter(),
 }
 
 

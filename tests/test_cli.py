@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -127,6 +128,68 @@ class TestStatisticsOption:
         out = capsys.readouterr().out
         assert "PW001  2" in out
         assert "PW002  1" in out
+
+
+class TestFormatOption:
+    """Verify --format CLI option."""
+
+    def test_format_json(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--format json outputs valid JSON."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--format", "json"])
+        assert exc_info.value.code == 1
+        data = json.loads(capsys.readouterr().out)
+        assert len(data) == 1
+        assert data[0]["code"] == "PW001"
+
+    def test_format_github(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--format github outputs ::error annotations."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--format", "github"])
+        assert exc_info.value.code == 1
+        out = capsys.readouterr().out
+        assert out.startswith("::error ")
+
+    def test_format_sarif(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--format sarif outputs valid SARIF JSON."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--format", "sarif"])
+        assert exc_info.value.code == 1
+        data = json.loads(capsys.readouterr().out)
+        assert data["version"] == "2.1.0"
 
 
 class TestRulesSubcommand:

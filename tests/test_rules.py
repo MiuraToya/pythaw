@@ -36,16 +36,13 @@ class TestBoto3ClientRule:
         node = _extract_call('boto3.client("s3")')
         assert self.rule.check(node) is True
 
-    def test_no_match_other_module(self) -> None:
-        node = _extract_call('other.client("s3")')
-        assert self.rule.check(node) is False
-
-    def test_no_match_other_attr(self) -> None:
-        node = _extract_call("boto3.resource('s3')")
-        assert self.rule.check(node) is False
-
-    def test_no_match_plain_function(self) -> None:
-        node = _extract_call("client('s3')")
+    @pytest.mark.parametrize("source", [
+        'other.client("s3")',
+        "boto3.resource('s3')",
+        "client('s3')",
+    ])
+    def test_no_match(self, source: str) -> None:
+        node = _extract_call(source)
         assert self.rule.check(node) is False
 
 
@@ -65,16 +62,13 @@ class TestBoto3ResourceRule:
         node = _extract_call('boto3.resource("s3")')
         assert self.rule.check(node) is True
 
-    def test_no_match_other_module(self) -> None:
-        node = _extract_call('other.resource("s3")')
-        assert self.rule.check(node) is False
-
-    def test_no_match_other_attr(self) -> None:
-        node = _extract_call('boto3.client("s3")')
-        assert self.rule.check(node) is False
-
-    def test_no_match_plain_function(self) -> None:
-        node = _extract_call("resource('s3')")
+    @pytest.mark.parametrize("source", [
+        'other.resource("s3")',
+        'boto3.client("s3")',
+        "resource('s3')",
+    ])
+    def test_no_match(self, source: str) -> None:
+        node = _extract_call(source)
         assert self.rule.check(node) is False
 
 
@@ -94,16 +88,13 @@ class TestBoto3SessionRule:
         node = _extract_call("boto3.Session()")
         assert self.rule.check(node) is True
 
-    def test_no_match_other_module(self) -> None:
-        node = _extract_call("other.Session()")
-        assert self.rule.check(node) is False
-
-    def test_no_match_other_attr(self) -> None:
-        node = _extract_call('boto3.client("s3")')
-        assert self.rule.check(node) is False
-
-    def test_no_match_plain_function(self) -> None:
-        node = _extract_call("Session()")
+    @pytest.mark.parametrize("source", [
+        "other.Session()",
+        'boto3.client("s3")',
+        "Session()",
+    ])
+    def test_no_match(self, source: str) -> None:
+        node = _extract_call(source)
         assert self.rule.check(node) is False
 
 

@@ -32,13 +32,14 @@ class TestCheckE2E:
     """End-to-end tests for the 'check' subcommand."""
 
     def test_detects_violation_and_exits_1(self, tmp_path: Path) -> None:
-        """Violations produce concise output and exit code 1."""
+        """Violations produce concise output with relative paths and exit code 1."""
         cwd = _use_fixture("violation", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 1
         assert "PW001" in result.stdout
         assert "boto3.client()" in result.stdout
         assert "Found 1 violation in 1 file." in result.stdout
+        assert result.stdout.startswith("app.py:")
 
     def test_clean_code_exits_0(self, tmp_path: Path) -> None:
         """No violations produce no output and exit code 0."""

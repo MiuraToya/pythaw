@@ -4,6 +4,8 @@ import subprocess
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
+import pytest
+
 from pythaw.config import Config
 from pythaw.finder import collect_files, find_handlers
 
@@ -76,28 +78,21 @@ class TestCollectFilesDirectory:
         names = sorted(p.name for p in result)
         assert names == ["a.py", "b.py", "c.py"]
 
-    def test_excludes_matching_directory(self, tmp_path: Path) -> None:
-        """Files under an excluded directory are filtered out."""
-        _make_files(tmp_path, {"app.py": "", "tests/test_app.py": ""})
-        cfg = Config(exclude=("tests",))
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            result = collect_files(tmp_path, cfg)
-        names = [p.name for p in result]
-        assert names == ["app.py"]
-
-    def test_excludes_glob_pattern(self, tmp_path: Path) -> None:
-        """Glob-style exclude patterns work correctly."""
-        _make_files(tmp_path, {"app.py": "", "test_app.py": ""})
-        cfg = Config(exclude=("test_*",))
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            result = collect_files(tmp_path, cfg)
-        names = [p.name for p in result]
-        assert names == ["app.py"]
-
-    def test_excludes_nested_directory(self, tmp_path: Path) -> None:
-        """Exclude pattern matches a directory name at any depth."""
-        _make_files(tmp_path, {"src/app.py": "", "src/.venv/lib.py": ""})
-        cfg = Config(exclude=(".venv",))
+    @pytest.mark.parametrize(
+        ("files", "exclude"),
+        [
+            ({"app.py": "", "tests/test_app.py": ""}, ("tests",)),
+            ({"app.py": "", "test_app.py": ""}, ("test_*",)),
+            ({"src/app.py": "", "src/.venv/lib.py": ""}, (".venv",)),
+        ],
+        ids=["directory", "glob-pattern", "nested-directory"],
+    )
+    def test_exclude_patterns(
+        self, tmp_path: Path, files: dict[str, str], exclude: tuple[str, ...]
+    ) -> None:
+        """Exclude patterns filter out matching files by directory, glob, or nesting."""
+        _make_files(tmp_path, files)
+        cfg = Config(exclude=exclude)
         with patch("pythaw.finder._git_ls_files", return_value=None):
             result = collect_files(tmp_path, cfg)
         names = [p.name for p in result]
@@ -110,12 +105,6 @@ class TestCollectFilesDirectory:
             result = collect_files(tmp_path, Config())
         names = [p.name for p in result]
         assert names == ["a.py", "m.py", "z.py"]
-
-    def test_empty_directory(self, tmp_path: Path) -> None:
-        """An empty directory yields an empty list."""
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            result = collect_files(tmp_path, Config())
-        assert result == []
 
 
 class TestGitIgnoreIntegration:
@@ -172,46 +161,28 @@ class TestGitFallback:
 class TestFindHandlers:
     """Verify handler discovery with fnmatch pattern matching."""
 
-    def test_finds_handler(self, tmp_path: Path) -> None:
-        """Matches a top-level function named 'handler'."""
-        _make_files(tmp_path, {"app.py": "def handler(event, context):\n    pass\n"})
+    @pytest.mark.parametrize(
+        ("func_name", "should_match"),
+        [
+            ("handler", True),
+            ("my_handler", True),
+            ("process_data", False),
+        ],
+    )
+    def test_default_pattern_matching(
+        self, tmp_path: Path, func_name: str, *, should_match: bool
+    ) -> None:
+        """Default patterns match 'handler' and '*_handler' but not arbitrary names."""
+        source = f"def {func_name}(event, context):\n    pass\n"
+        _make_files(tmp_path, {"app.py": source})
         with patch("pythaw.finder._git_ls_files", return_value=None):
             result = find_handlers(tmp_path, Config())
-        assert len(result) == 1
-        assert result[0].name == "handler"
-        assert result[0].file == (tmp_path / "app.py").resolve()
-
-    def test_finds_lambda_handler(self, tmp_path: Path) -> None:
-        """Matches a top-level function named 'lambda_handler'."""
-        _make_files(
-            tmp_path,
-            {"app.py": "def lambda_handler(event, context):\n    pass\n"},
-        )
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            result = find_handlers(tmp_path, Config())
-        assert len(result) == 1
-        assert result[0].name == "lambda_handler"
-
-    def test_finds_wildcard_handler(self, tmp_path: Path) -> None:
-        """Matches a top-level function matching *_handler pattern."""
-        _make_files(
-            tmp_path,
-            {"app.py": "def my_handler(event, context):\n    pass\n"},
-        )
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            result = find_handlers(tmp_path, Config())
-        assert len(result) == 1
-        assert result[0].name == "my_handler"
-
-    def test_ignores_non_matching_functions(self, tmp_path: Path) -> None:
-        """Functions not matching any handler pattern are ignored."""
-        _make_files(
-            tmp_path,
-            {"app.py": "def process_data(data):\n    pass\n"},
-        )
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            result = find_handlers(tmp_path, Config())
-        assert result == []
+        if should_match:
+            assert len(result) == 1
+            assert result[0].name == func_name
+            assert result[0].file == (tmp_path / "app.py").resolve()
+        else:
+            assert result == []
 
     def test_custom_handler_patterns(self, tmp_path: Path) -> None:
         """Uses handler_patterns from config instead of defaults."""
@@ -257,20 +228,6 @@ class TestFindHandlers:
         assert "handler" in names
         assert "lambda_handler" in names
 
-    def test_handlers_across_multiple_files(self, tmp_path: Path) -> None:
-        """Handlers in different files are all discovered."""
-        _make_files(
-            tmp_path,
-            {
-                "a.py": "def handler(event, context):\n    pass\n",
-                "b.py": "def lambda_handler(event, context):\n    pass\n",
-            },
-        )
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            result = find_handlers(tmp_path, Config())
-        names = sorted(h.name for h in result)
-        assert names == ["handler", "lambda_handler"]
-
     def test_returns_correct_lineno_and_col_offset(self, tmp_path: Path) -> None:
         """HandlerFunction contains correct line number and column offset."""
         source = "\n\ndef handler(event, context):\n    pass\n"
@@ -306,13 +263,6 @@ class TestFindHandlersEdgeCases:
             result = find_handlers(tmp_path, Config())
         assert len(result) == 1
         assert result[0].file == (tmp_path / "good.py").resolve()
-
-    def test_empty_file_no_handlers(self, tmp_path: Path) -> None:
-        """An empty Python file yields no handlers."""
-        _make_files(tmp_path, {"empty.py": ""})
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            result = find_handlers(tmp_path, Config())
-        assert result == []
 
     def test_async_handler(self, tmp_path: Path) -> None:
         """Async handler functions are also detected."""

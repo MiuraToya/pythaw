@@ -1,8 +1,13 @@
 # Python
 .venv/
+__pycache__/
 
 # Ruff
 .ruff_cache
 
 # mypy
 .mypy_cache
+
+# pytest
+.pytest_cache
+.coverage

@@ -11,6 +11,7 @@ class TestConciseFormatter:
         self.formatter = ConciseFormatter()
 
     def test_single_violation(self) -> None:
+        """Formats one violation with a '1 violation in 1 file' summary."""
         violations = [
             Violation(
                 file="handler.py",
@@ -30,6 +31,7 @@ class TestConciseFormatter:
         assert result == expected
 
     def test_multiple_violations_multiple_files(self) -> None:
+        """Formats violations across multiple files with correct summary counts."""
         violations = [
             Violation(
                 file="handler.py",
@@ -65,6 +67,7 @@ class TestConciseFormatter:
         assert result == expected
 
     def test_no_violations(self) -> None:
+        """Empty violation list returns empty string."""
         result = self.formatter.format([])
         assert result == ""
 
@@ -73,9 +76,11 @@ class TestFormatterRegistry:
     """Verify get_formatter() registry lookup."""
 
     def test_get_concise_formatter(self) -> None:
+        """'concise' key returns a ConciseFormatter instance."""
         formatter = get_formatter("concise")
         assert isinstance(formatter, ConciseFormatter)
 
     def test_get_unknown_formatter(self) -> None:
+        """Unknown key returns None."""
         formatter = get_formatter("unknown")
         assert formatter is None

@@ -27,12 +27,15 @@ class TestBoto3ClientRule:
         self.rule = Boto3ClientRule()
 
     def test_code(self) -> None:
+        """Rule code is PW001."""
         assert self.rule.code == "PW001"
 
     def test_message(self) -> None:
+        """Message describes the violation."""
         assert self.rule.message == "boto3.client() should be called at module scope"
 
     def test_match_boto3_client(self) -> None:
+        """Matches boto3.client() call."""
         node = _extract_call('boto3.client("s3")')
         assert self.rule.check(node) is True
 
@@ -45,6 +48,7 @@ class TestBoto3ClientRule:
         ],
     )
     def test_no_match(self, source: str) -> None:
+        """Does not match unrelated calls."""
         node = _extract_call(source)
         assert self.rule.check(node) is False
 
@@ -56,12 +60,15 @@ class TestBoto3ResourceRule:
         self.rule = Boto3ResourceRule()
 
     def test_code(self) -> None:
+        """Rule code is PW002."""
         assert self.rule.code == "PW002"
 
     def test_message(self) -> None:
+        """Message describes the violation."""
         assert self.rule.message == "boto3.resource() should be called at module scope"
 
     def test_match_boto3_resource(self) -> None:
+        """Matches boto3.resource() call."""
         node = _extract_call('boto3.resource("s3")')
         assert self.rule.check(node) is True
 
@@ -74,6 +81,7 @@ class TestBoto3ResourceRule:
         ],
     )
     def test_no_match(self, source: str) -> None:
+        """Does not match unrelated calls."""
         node = _extract_call(source)
         assert self.rule.check(node) is False
 
@@ -85,12 +93,15 @@ class TestBoto3SessionRule:
         self.rule = Boto3SessionRule()
 
     def test_code(self) -> None:
+        """Rule code is PW003."""
         assert self.rule.code == "PW003"
 
     def test_message(self) -> None:
+        """Message describes the violation."""
         assert self.rule.message == "boto3.Session() should be called at module scope"
 
     def test_match_boto3_session(self) -> None:
+        """Matches boto3.Session() call."""
         node = _extract_call("boto3.Session()")
         assert self.rule.check(node) is True
 
@@ -103,6 +114,7 @@ class TestBoto3SessionRule:
         ],
     )
     def test_no_match(self, source: str) -> None:
+        """Does not match unrelated calls."""
         node = _extract_call(source)
         assert self.rule.check(node) is False
 
@@ -111,6 +123,7 @@ class TestRegistry:
     """Verify get_all_rules() and get_rule() registry functions."""
 
     def test_get_all_rules(self) -> None:
+        """Returns all three built-in rules in order."""
         expected = (Boto3ClientRule, Boto3ResourceRule, Boto3SessionRule)
         rules = get_all_rules()
         assert tuple(type(r) for r in rules) == expected
@@ -124,8 +137,10 @@ class TestRegistry:
         ],
     )
     def test_get_rule_by_code(self, code: str, expected_type: type) -> None:
+        """Looks up each rule by its code."""
         rule = get_rule(code)
         assert isinstance(rule, expected_type)
 
     def test_get_rule_unknown_returns_none(self) -> None:
+        """Unknown code returns None."""
         assert get_rule("PW999") is None

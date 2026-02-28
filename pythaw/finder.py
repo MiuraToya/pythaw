@@ -55,9 +55,7 @@ def collect_files(path: Path, config: Config) -> list[Path]:
         py_files = _rglob_py(target)
 
     if config.exclude:
-        py_files = [
-            f for f in py_files if not _is_excluded(f, target, config.exclude)
-        ]
+        py_files = [f for f in py_files if not _is_excluded(f, target, config.exclude)]
 
     py_files.sort()
     return py_files

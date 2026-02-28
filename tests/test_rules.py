@@ -20,10 +20,9 @@ def _extract_call(source: str) -> ast.Call:
     raise AssertionError(msg)
 
 
-# --- PW001: boto3.client() ---
-
-
 class TestBoto3ClientRule:
+    """PW001: Verify check() and metadata for boto3.client()."""
+
     def setup_method(self) -> None:
         self.rule = Boto3ClientRule()
 
@@ -50,10 +49,9 @@ class TestBoto3ClientRule:
         assert self.rule.check(node) is False
 
 
-# --- PW002: boto3.resource() ---
-
-
 class TestBoto3ResourceRule:
+    """PW002: Verify check() and metadata for boto3.resource()."""
+
     def setup_method(self) -> None:
         self.rule = Boto3ResourceRule()
 
@@ -80,10 +78,9 @@ class TestBoto3ResourceRule:
         assert self.rule.check(node) is False
 
 
-# --- PW003: boto3.Session() ---
-
-
 class TestBoto3SessionRule:
+    """PW003: Verify check() and metadata for boto3.Session()."""
+
     def setup_method(self) -> None:
         self.rule = Boto3SessionRule()
 
@@ -110,10 +107,9 @@ class TestBoto3SessionRule:
         assert self.rule.check(node) is False
 
 
-# --- Registry ---
-
-
 class TestRegistry:
+    """Verify get_all_rules() and get_rule() registry functions."""
+
     def test_get_all_rules_returns_three(self) -> None:
         rules = get_all_rules()
         assert len(rules) == 3

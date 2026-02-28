@@ -1,6 +1,6 @@
 # pythaw 仕様書
 
-AWS Lambda の Python ハンドラーで、モジュールスコープに置くべき重い初期化処理がハンドラー関数内に書かれていないかを検出する静的解析 CLI ツール。
+AWS Lambda の Python ハンドラーから到達可能なコールチェーン全体を走査し、モジュールスコープに置くべき重い初期化処理を検出する静的解析 CLI ツール。
 
 ## Phase 1（個人開発者向け）
 
@@ -22,16 +22,27 @@ boto3 のみ。
 | PW002 | `boto3.resource()`| AWS SDK resource  |
 | PW003 | `boto3.Session()` | AWS SDK session   |
 
-### handler の特定
+### handler の特定とコールグラフ走査
 
+#### エントリポイント探索
+
+- `exclude` / `.gitignore` で除外されないファイルから `*.py` を再帰探索
 - トップレベル関数の名前を `fnmatch` でパターンマッチ
 - デフォルトパターン: `handler`, `lambda_handler`, `*_handler`
 - `pyproject.toml` で変更可能
-- handler 内はネストされたクラス・関数も再帰的に検査
+
+#### コールグラフ走査
+
+- ハンドラー関数内の関数/クラス呼び出しを再帰的に辿る
+- import 先のファイルも AST 解析して追跡
+- 探索深度は無制限、循環参照は `(file_path, qualified_name)` の訪問済みセットで回避
+- サードパーティ / 標準ライブラリの import は解決不能としてスキップ（警告を出力）
 
 ### 出力
 
-concise 形式（`file:line:col: code message`）:
+concise 形式（`file:line:col: code message`）。
+
+直接呼び出し（ハンドラー内で直接検出）:
 
 ```
 handler.py:15:4: PW001 boto3.client() should be called at module scope
@@ -39,6 +50,17 @@ handler.py:23:8: PW002 boto3.resource() should be called at module scope
 
 Found 2 violations in 1 file.
 ```
+
+間接呼び出し（import 先で検出）:
+
+```
+infra/aws.py:4:15: PW001 boto3.client() should be called at module scope
+  via handler.py:2:10 → S3Client() → AwsProvider.get_client()
+
+Found 1 violation in 1 file.
+```
+
+同一違反に複数チェーンから到達する場合はチェーンごとに報告する。
 
 ### 終了コード
 
@@ -55,7 +77,7 @@ Found 2 violations in 1 file.
 ```toml
 [tool.pythaw]
 handler_patterns = ["handler", "lambda_handler"]
-exclude = [".venv", "tests"]
+exclude = [".venv", "tests"]  # handler 探索スキャン対象の絞り込みのみ（import 先には適用しない）
 
 [[tool.pythaw.custom_rules]]
 pattern = "mylib.connect"
@@ -74,16 +96,11 @@ message = "urllib3.PoolManager() should be called at module scope"
 - **Why is this bad?** - なぜ問題か（コールドスタートの説明）
 - **Example** - NG コード + OK コード
 
-### ファイル検出
-
-- `*.py` を再帰探索
-- `.gitignore` 尊重
-- `exclude` 設定で除外パターン指定
-
 ### エラーハンドリング
 
 - パースエラー（壊れた Python ファイル）→ 報告して他ファイルは続行（終了コード 1）
 - 設定エラー（pyproject.toml の不正）→ 即停止（終了コード 2）
+- import 解決失敗（サードパーティ / 標準ライブラリ等）→ 警告を出して続行
 
 ---
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -43,6 +44,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
     check_p = sub.add_parser("check", help="Check files for violations")
     check_p.add_argument("path", type=Path, help="File or directory to check")
+    check_p.add_argument(
+        "--exit-zero",
+        action="store_true",
+        help="Exit with code 0 even when violations are found",
+    )
+    check_p.add_argument(
+        "--statistics",
+        action="store_true",
+        help="Show per-rule violation counts",
+    )
     check_p.set_defaults(func=_cmd_check)
 
     rules_p = sub.add_parser("rules", help="List all built-in rules")
@@ -71,7 +82,14 @@ def _cmd_check(args: argparse.Namespace) -> int:
     formatter = get_formatter("concise")
     if formatter is not None:  # pragma: no branch — always exists
         print(formatter.format(violations))
-    return 1
+
+    if args.statistics:
+        counts = Counter(v.code for v in violations)
+        print()
+        for code in sorted(counts):
+            print(f"{code}  {counts[code]}")
+
+    return 0 if args.exit_zero else 1
 
 
 def _cmd_rules(_args: argparse.Namespace) -> int:

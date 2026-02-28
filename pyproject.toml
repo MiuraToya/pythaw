@@ -35,6 +35,7 @@ strict = true
 
 [tool.ruff]
 target-version = "py310"
+extend-exclude = ["tests/e2e/fixtures"]
 
 [tool.ruff.lint]
 select = ["ALL"]

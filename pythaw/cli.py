@@ -43,6 +43,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
     check_p = sub.add_parser("check", help="Check files for violations")
     check_p.add_argument("path", type=Path, help="File or directory to check")
+    check_p.add_argument(
+        "--select",
+        help="Comma-separated list of rule codes to enable",
+    )
+    check_p.add_argument(
+        "--ignore",
+        help="Comma-separated list of rule codes to disable",
+    )
     check_p.set_defaults(func=_cmd_check)
 
     rules_p = sub.add_parser("rules", help="List all built-in rules")
@@ -62,7 +70,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    violations = check(args.path, config)
+    select = tuple(args.select.split(",")) if args.select else None
+    ignore = tuple(args.ignore.split(",")) if args.ignore else None
+    violations = check(args.path, config, select=select, ignore=ignore)
 
     if not violations:
         print("All checks passed!")

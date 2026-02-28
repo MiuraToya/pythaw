@@ -207,6 +207,69 @@ class TestCheckPositionInfo:
         assert v.col == 13
 
 
+class TestCheckSelectIgnore:
+    """Verify --select and --ignore rule filtering."""
+
+    def test_select_filters_to_specified_rules(self, tmp_path: Path) -> None:
+        """Only selected rules produce violations."""
+        source = (
+            "import boto3\n"
+            "\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(
+                tmp_path,
+                Config(),
+                select=("PW001",),
+            )
+        assert len(violations) == 1
+        assert violations[0].code == "PW001"
+
+    def test_ignore_excludes_specified_rules(self, tmp_path: Path) -> None:
+        """Ignored rules do not produce violations."""
+        source = (
+            "import boto3\n"
+            "\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(
+                tmp_path,
+                Config(),
+                ignore=("PW001",),
+            )
+        assert len(violations) == 1
+        assert violations[0].code == "PW002"
+
+    def test_select_and_ignore_combined(self, tmp_path: Path) -> None:
+        """Ignore takes precedence within selected rules."""
+        source = (
+            "import boto3\n"
+            "\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+            "    boto3.Session()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(
+                tmp_path,
+                Config(),
+                select=("PW001", "PW002"),
+                ignore=("PW002",),
+            )
+        assert len(violations) == 1
+        assert violations[0].code == "PW001"
+
+
 class TestCheckEdgeCases:
     """Verify edge cases for the checker."""
 

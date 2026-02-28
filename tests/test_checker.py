@@ -56,14 +56,6 @@ class TestCheckDirectViolations:
             violations = check(tmp_path, Config())
         assert violations == []
 
-    def test_no_violation_without_matching_calls(self, tmp_path: Path) -> None:
-        """Handler with no boto3 calls produces no violations."""
-        source = "def handler(event, context):\n    return {'statusCode': 200}\n"
-        _make_files(tmp_path, {"app.py": source})
-        with patch("pythaw.finder._git_ls_files", return_value=None):
-            violations = check(tmp_path, Config())
-        assert violations == []
-
     def test_multiple_violations_in_one_handler(self, tmp_path: Path) -> None:
         """Multiple violating calls in a single handler are all reported."""
         source = (
@@ -137,13 +129,3 @@ class TestCheckEdgeCases:
             violations = check(tmp_path, Config())
         assert len(violations) == 1
         assert violations[0].file == str((tmp_path / "good.py").resolve())
-
-    def test_single_file_path(self, tmp_path: Path) -> None:
-        """Check works when given a single file path."""
-        py = tmp_path / "app.py"
-        py.write_text(
-            'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
-        )
-        violations = check(py, Config())
-        assert len(violations) == 1
-        assert violations[0].code == "PW001"

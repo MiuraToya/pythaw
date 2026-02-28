@@ -102,8 +102,9 @@ class TestRegistry:
     """Verify get_all_rules() and get_rule() registry functions."""
 
     def test_get_all_rules(self) -> None:
+        expected = (Boto3ClientRule, Boto3ResourceRule, Boto3SessionRule)
         rules = get_all_rules()
-        assert rules == (get_rule("PW001"), get_rule("PW002"), get_rule("PW003"))
+        assert tuple(type(r) for r in rules) == expected
 
     @pytest.mark.parametrize(
         ("code", "expected_type"),

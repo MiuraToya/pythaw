@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import os
 from typing import TYPE_CHECKING
 
 from pythaw.finder import find_handlers
@@ -68,7 +69,7 @@ def _check_function(
     """Walk *func_node* and return violations for any matching Call nodes."""
     return [
         Violation(
-            file=str(file),
+            file=os.path.relpath(file),
             line=node.lineno,
             col=node.col_offset,
             code=rule.code,

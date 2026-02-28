@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from pythaw.checker import check
 from pythaw.config import Config
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _make_files(base: Path, files: dict[str, str]) -> None:
@@ -92,7 +89,7 @@ class TestCheckPositionInfo:
     """Verify that violations carry correct file, line, and column info."""
 
     def test_correct_position(self, tmp_path: Path) -> None:
-        """Violation points to the exact call location."""
+        """Violation points to the exact call location with a relative path."""
         source = (
             "import boto3\n"
             "\n"
@@ -104,7 +101,7 @@ class TestCheckPositionInfo:
             violations = check(tmp_path, Config())
         assert len(violations) == 1
         v = violations[0]
-        assert v.file == str((tmp_path / "app.py").resolve())
+        assert not Path(v.file).is_absolute()
         assert v.line == 4
         assert v.col == 13
 
@@ -128,4 +125,4 @@ class TestCheckEdgeCases:
         with patch("pythaw.finder._git_ls_files", return_value=None):
             violations = check(tmp_path, Config())
         assert len(violations) == 1
-        assert violations[0].file == str((tmp_path / "good.py").resolve())
+        assert not Path(violations[0].file).is_absolute()

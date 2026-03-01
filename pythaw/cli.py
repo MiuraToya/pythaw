@@ -9,6 +9,13 @@ from typing import TYPE_CHECKING
 from pythaw.checker import check
 from pythaw.config import Config, ConfigError
 from pythaw.formatters import get_formatter
+from pythaw.rendering import (
+    print_rule_detail,
+    print_rules_list,
+    print_statistics,
+    print_success,
+    print_violations,
+)
 from pythaw.rules import get_all_rules, get_rule
 
 if TYPE_CHECKING:
@@ -101,25 +108,30 @@ def _cmd_check(args: argparse.Namespace) -> int:
     violations = check(args.path, config, select=select, ignore=ignore)
 
     if not violations:
-        print("All checks passed!")
+        print_success()
         return 0
 
-    formatter = get_formatter(args.format)
-    if formatter is not None:  # pragma: no branch — always exists
-        print(formatter.format(violations))
+    if args.format == "concise":
+        print_violations(violations)
+    else:
+        formatter = get_formatter(args.format)
+        if formatter is not None:  # pragma: no branch — always exists
+            print(formatter.format(violations))
 
     if args.statistics:
         counts = Counter(v.code for v in violations)
-        print()
-        for code in sorted(counts):
-            print(f"{code}  {counts[code]}")
+        if args.format == "concise":
+            print_statistics(counts)
+        else:
+            print()
+            for code in sorted(counts):
+                print(f"{code}  {counts[code]}")
 
     return 0 if args.exit_zero else 1
 
 
 def _cmd_rules(_args: argparse.Namespace) -> int:
-    for rule in get_all_rules():
-        print(f"{rule.code}  {rule.message}")
+    print_rules_list(get_all_rules())
     return 0
 
 
@@ -129,15 +141,5 @@ def _cmd_rule(args: argparse.Namespace) -> int:
         print(f"Unknown rule: {args.code}", file=sys.stderr)
         return 2
 
-    print(f"{rule.code}: {rule.message}")
-    print()
-    print("What it does:")
-    print(f"  {rule.what}")
-    print()
-    print("Why is this bad?:")
-    print(f"  {rule.why}")
-    print()
-    print("Example:")
-    for line in rule.example.splitlines():
-        print(f"  {line}")
+    print_rule_detail(rule)
     return 0

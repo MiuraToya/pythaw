@@ -33,12 +33,7 @@ def lambda_handler(event, context):
     return client.get_object(Bucket="my-bucket", Key=event["key"])
 ```
 
-```bash
-$ pythaw check handler.py
-handler.py:6:14: PW001 boto3.client() should be called at module scope
-
-Found 1 violation in 1 file.
-```
+<img src="docs/images/check-violation.svg" alt="pythaw check — violation detected" width="720">
 
 Move the client to module scope so Lambda container reuse skips the initialization:
 
@@ -50,6 +45,8 @@ client = boto3.client("s3")
 def lambda_handler(event, context):
     return client.get_object(Bucket="my-bucket", Key=event["key"])
 ```
+
+<img src="docs/images/check-success.svg" alt="pythaw check — all checks passed" width="720">
 
 ## Usage
 

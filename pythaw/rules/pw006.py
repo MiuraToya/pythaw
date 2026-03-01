@@ -18,10 +18,10 @@ class RedisRule(Rule):
     )
 
     why = (
-        "Creating a Redis client inside the handler means it is re-created on "
-        "every invocation. Moving it to module scope allows AWS Lambda to reuse "
-        "the client across warm invocations, significantly reducing cold-start "
-        "latency."
+        "Creating a Redis client inside the handler means its connection pool is "
+        "discarded after every invocation. Moving it to module scope allows AWS "
+        "Lambda to reuse established connections across warm invocations, "
+        "avoiding repeated TCP handshakes."
     )
 
     example = (

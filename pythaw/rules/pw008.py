@@ -18,10 +18,10 @@ class HttpxClientRule(Rule):
     )
 
     why = (
-        "Creating an httpx Client inside the handler means it is re-created on "
-        "every invocation. Moving it to module scope allows AWS Lambda to reuse "
-        "the client and its connection pool across warm invocations, significantly "
-        "reducing cold-start latency."
+        "Creating an httpx Client inside the handler means its connection pool is "
+        "discarded after every invocation. Moving it to module scope allows AWS "
+        "Lambda to reuse established TCP/TLS connections across warm invocations, "
+        "avoiding repeated handshakes."
     )
 
     example = (

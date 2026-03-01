@@ -18,10 +18,10 @@ class RequestsSessionRule(Rule):
     )
 
     why = (
-        "Creating a requests Session inside the handler means it is re-created on "
-        "every invocation. Moving it to module scope allows AWS Lambda to reuse "
-        "the session and its connection pool across warm invocations, significantly "
-        "reducing cold-start latency."
+        "Creating a requests Session inside the handler means its underlying "
+        "urllib3 connection pool is discarded after every invocation. Moving it "
+        "to module scope allows AWS Lambda to reuse established TCP/TLS "
+        "connections across warm invocations, avoiding repeated handshakes."
     )
 
     example = (

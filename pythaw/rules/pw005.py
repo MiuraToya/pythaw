@@ -18,10 +18,10 @@ class Psycopg2ConnectRule(Rule):
     )
 
     why = (
-        "Creating a PostgreSQL connection inside the handler means it is re-created "
-        "on every invocation. Moving it to module scope allows AWS Lambda to reuse "
-        "the connection across warm invocations, significantly reducing cold-start "
-        "latency."
+        "Creating a PostgreSQL connection inside the handler means a TCP handshake "
+        "and database authentication are performed on every invocation. Moving it "
+        "to module scope allows AWS Lambda to reuse the connection across warm "
+        "invocations, avoiding this overhead."
     )
 
     example = (

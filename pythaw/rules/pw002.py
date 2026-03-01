@@ -19,9 +19,10 @@ class Boto3ResourceRule(Rule):
 
     why = (
         "Creating a boto3 resource inside the handler means it is re-created on "
-        "every invocation. Moving it to module scope allows AWS Lambda to reuse "
-        "the resource across warm invocations, significantly reducing cold-start "
-        "latency."
+        "every invocation. Resource construction is expensive because it resolves "
+        "credentials, discovers endpoints, and sets up HTTP connections. Moving "
+        "it to module scope allows AWS Lambda to reuse the resource across warm "
+        "invocations, avoiding this overhead."
     )
 
     example = (

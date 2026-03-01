@@ -19,9 +19,10 @@ class Boto3SessionRule(Rule):
 
     why = (
         "Creating a boto3 Session inside the handler means it is re-created on "
-        "every invocation. Moving it to module scope allows AWS Lambda to reuse "
-        "the session across warm invocations, significantly reducing cold-start "
-        "latency."
+        "every invocation. Session construction is expensive because it reads "
+        "configuration files and resolves credentials. Moving it to module scope "
+        "allows AWS Lambda to reuse the session across warm invocations, avoiding "
+        "this overhead."
     )
 
     example = (

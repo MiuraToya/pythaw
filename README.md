@@ -9,8 +9,10 @@ It recursively follows function calls from handler functions—including across 
 ## Install
 
 ```bash
+# pip
 pip install pythaw
-# or
+
+# uv
 uv add pythaw
 ```
 

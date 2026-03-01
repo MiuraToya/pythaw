@@ -1,146 +1,80 @@
 from __future__ import annotations
 
-import ast
+import re
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
+from pythaw.checker import check
+from pythaw.config import Config
 from pythaw.rules import get_all_rules, get_rule
-from pythaw.rules.pw001 import Boto3ClientRule
-from pythaw.rules.pw002 import Boto3ResourceRule
-from pythaw.rules.pw003 import Boto3SessionRule
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures" / "rules"
+
+_FIXTURES = sorted(FIXTURES_DIR.glob("PW*.py"))
 
 
-def _extract_call(source: str) -> ast.Call:
-    """Parse a source string and return the first Call node found."""
-    tree = ast.parse(source)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call):
-            return node
-    msg = f"No Call node found in: {source}"
-    raise AssertionError(msg)
+def _parse_expected_errors(fixture: Path) -> set[tuple[int, str]]:
+    """Extract ``(line_number, code)`` pairs from ``# error: PWXXX`` comments."""
+    errors: set[tuple[int, str]] = set()
+    for i, line in enumerate(fixture.read_text().splitlines(), start=1):
+        m = re.search(r"#\s*error:\s*(PW\d+)", line)
+        if m:
+            errors.add((i, m.group(1)))
+    return errors
 
 
-class TestBoto3ClientRule:
-    """PW001: Verify check() and metadata for boto3.client()."""
-
-    def setup_method(self) -> None:
-        self.rule = Boto3ClientRule()
-
-    def test_code(self) -> None:
-        """Rule code is PW001."""
-        assert self.rule.code == "PW001"
-
-    def test_message(self) -> None:
-        """Message describes the violation."""
-        assert self.rule.message == "boto3.client() should be called at module scope"
-
-    def test_match_boto3_client(self) -> None:
-        """Matches boto3.client() call."""
-        node = _extract_call('boto3.client("s3")')
-        assert self.rule.check(node) is True
-
-    @pytest.mark.parametrize(
-        "source",
-        [
-            'other.client("s3")',
-            "boto3.resource('s3')",
-            "client('s3')",
-        ],
-    )
-    def test_no_match(self, source: str) -> None:
-        """Does not match unrelated calls."""
-        node = _extract_call(source)
-        assert self.rule.check(node) is False
+# ---------------------------------------------------------------------------
+# Fixture-based rule violation tests
+# ---------------------------------------------------------------------------
 
 
-class TestBoto3ResourceRule:
-    """PW002: Verify check() and metadata for boto3.resource()."""
+@pytest.mark.parametrize("fixture", _FIXTURES, ids=lambda p: p.stem)
+class TestRuleViolation:
+    """Verify rule detection using fixture files.
 
-    def setup_method(self) -> None:
-        self.rule = Boto3ResourceRule()
+    Each fixture in ``tests/fixtures/rules/`` contains handler code
+    annotated with ``# error: PWXXX`` comments marking expected
+    violations, plus OK code that should not trigger any violations.
+    """
 
-    def test_code(self) -> None:
-        """Rule code is PW002."""
-        assert self.rule.code == "PW002"
+    def test_expected_violations_detected(self, fixture: Path) -> None:
+        """All lines marked with '# error:' produce the expected violation."""
+        expected = _parse_expected_errors(fixture)
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(fixture, Config())
+        actual = {(v.line, v.code) for v in violations}
+        assert actual == expected
 
-    def test_message(self) -> None:
-        """Message describes the violation."""
-        assert self.rule.message == "boto3.resource() should be called at module scope"
-
-    def test_match_boto3_resource(self) -> None:
-        """Matches boto3.resource() call."""
-        node = _extract_call('boto3.resource("s3")')
-        assert self.rule.check(node) is True
-
-    @pytest.mark.parametrize(
-        "source",
-        [
-            'other.resource("s3")',
-            'boto3.client("s3")',
-            "resource('s3')",
-        ],
-    )
-    def test_no_match(self, source: str) -> None:
-        """Does not match unrelated calls."""
-        node = _extract_call(source)
-        assert self.rule.check(node) is False
+    def test_no_false_positives(self, fixture: Path) -> None:
+        """Lines without '# error:' do not produce violations."""
+        expected_lines = {line for line, _ in _parse_expected_errors(fixture)}
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(fixture, Config())
+        unexpected = [v for v in violations if v.line not in expected_lines]
+        assert unexpected == []
 
 
-class TestBoto3SessionRule:
-    """PW003: Verify check() and metadata for boto3.Session()."""
-
-    def setup_method(self) -> None:
-        self.rule = Boto3SessionRule()
-
-    def test_code(self) -> None:
-        """Rule code is PW003."""
-        assert self.rule.code == "PW003"
-
-    def test_message(self) -> None:
-        """Message describes the violation."""
-        assert self.rule.message == "boto3.Session() should be called at module scope"
-
-    def test_match_boto3_session(self) -> None:
-        """Matches boto3.Session() call."""
-        node = _extract_call("boto3.Session()")
-        assert self.rule.check(node) is True
-
-    @pytest.mark.parametrize(
-        "source",
-        [
-            "other.Session()",
-            'boto3.client("s3")',
-            "Session()",
-        ],
-    )
-    def test_no_match(self, source: str) -> None:
-        """Does not match unrelated calls."""
-        node = _extract_call(source)
-        assert self.rule.check(node) is False
+# ---------------------------------------------------------------------------
+# Registry tests
+# ---------------------------------------------------------------------------
 
 
 class TestRegistry:
     """Verify get_all_rules() and get_rule() registry functions."""
 
-    def test_get_all_rules(self) -> None:
-        """Returns all three built-in rules in order."""
-        expected = (Boto3ClientRule, Boto3ResourceRule, Boto3SessionRule)
+    def test_all_rules_sorted_by_code(self) -> None:
+        """Rules are returned sorted by code."""
         rules = get_all_rules()
-        assert tuple(type(r) for r in rules) == expected
+        codes = [r.code for r in rules]
+        assert codes == sorted(codes)
 
-    @pytest.mark.parametrize(
-        ("code", "expected_type"),
-        [
-            ("PW001", Boto3ClientRule),
-            ("PW002", Boto3ResourceRule),
-            ("PW003", Boto3SessionRule),
-        ],
-    )
-    def test_get_rule_by_code(self, code: str, expected_type: type) -> None:
-        """Looks up each rule by its code."""
-        rule = get_rule(code)
-        assert isinstance(rule, expected_type)
+    def test_get_rule_by_code(self) -> None:
+        """Each rule can be looked up by its code."""
+        for rule in get_all_rules():
+            assert get_rule(rule.code) is rule
 
-    def test_get_rule_unknown_returns_none(self) -> None:
+    def test_unknown_returns_none(self) -> None:
         """Unknown code returns None."""
         assert get_rule("PW999") is None

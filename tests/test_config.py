@@ -94,6 +94,30 @@ class TestConfigLoad:
         finally:
             os.chdir(original)
 
+    def test_load_per_file_ignores(self, tmp_path: Path) -> None:
+        """per-file-ignores section is read as (glob, codes) pairs."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.pythaw]\n'
+            '[tool.pythaw.per-file-ignores]\n'
+            '"tests/*" = ["PW001", "PW002"]\n'
+        )
+        original = _chdir(tmp_path)
+        try:
+            cfg = Config.load()
+            assert cfg.per_file_ignores == (("tests/*", ("PW001", "PW002")),)
+        finally:
+            os.chdir(original)
+
+    def test_load_per_file_ignores_default(self, tmp_path: Path) -> None:
+        """Missing per-file-ignores falls back to empty tuple."""
+        (tmp_path / "pyproject.toml").write_text("[tool.pythaw]\nexclude = []\n")
+        original = _chdir(tmp_path)
+        try:
+            cfg = Config.load()
+            assert cfg.per_file_ignores == ()
+        finally:
+            os.chdir(original)
+
 
 class TestConfigValidation:
     """Verify that invalid [tool.pythaw] values raise ConfigError."""
@@ -128,6 +152,32 @@ class TestConfigValidation:
         original = _chdir(tmp_path)
         try:
             with pytest.raises(ConfigError, match="exclude must be a list"):
+                Config.load()
+        finally:
+            os.chdir(original)
+
+    def test_per_file_ignores_not_table(self, tmp_path: Path) -> None:
+        """Non-table per-file-ignores raises ConfigError."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.pythaw]\nper-file-ignores = "bad"\n'
+        )
+        original = _chdir(tmp_path)
+        try:
+            with pytest.raises(ConfigError, match="per-file-ignores must be a table"):
+                Config.load()
+        finally:
+            os.chdir(original)
+
+    def test_per_file_ignores_bad_values(self, tmp_path: Path) -> None:
+        """Non-list values in per-file-ignores raises ConfigError."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.pythaw]\n'
+            '[tool.pythaw.per-file-ignores]\n'
+            '"tests/*" = "PW001"\n'
+        )
+        original = _chdir(tmp_path)
+        try:
+            with pytest.raises(ConfigError, match="per-file-ignores"):
                 Config.load()
         finally:
             os.chdir(original)

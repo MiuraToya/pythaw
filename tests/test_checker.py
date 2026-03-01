@@ -396,6 +396,72 @@ class TestFileLevelSuppression:
         assert "check.py" in violations[0].file
 
 
+class TestPerFileIgnores:
+    """Verify per-file-ignores config option."""
+
+    def test_ignores_rule_for_matching_file(self, tmp_path: Path) -> None:
+        """Files matching the glob pattern have the specified rules ignored."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"tests/test_app.py": source})
+        cfg = Config(per_file_ignores=(("tests/*", ("PW001",)),))
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, cfg)
+        codes = [v.code for v in violations]
+        assert "PW001" not in codes
+        assert "PW002" in codes
+
+    def test_no_effect_on_non_matching_file(self, tmp_path: Path) -> None:
+        """Files that do not match the glob pattern are checked normally."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"src/app.py": source})
+        cfg = Config(per_file_ignores=(("tests/*", ("PW001",)),))
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, cfg)
+        assert len(violations) == 1
+        assert violations[0].code == "PW001"
+
+    def test_multiple_patterns(self, tmp_path: Path) -> None:
+        """Multiple per-file-ignores entries are all applied."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"tests/test_app.py": source})
+        cfg = Config(
+            per_file_ignores=(
+                ("tests/*", ("PW001",)),
+                ("tests/*", ("PW002",)),
+            ),
+        )
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, cfg)
+        assert violations == []
+
+    def test_empty_per_file_ignores(self, tmp_path: Path) -> None:
+        """Empty per_file_ignores has no effect."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        cfg = Config(per_file_ignores=())
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, cfg)
+        assert len(violations) == 1
+
+
 class TestCheckEdgeCases:
     """Verify edge cases for the checker."""
 

@@ -41,6 +41,7 @@ def check(
     rules = _filter_rules(get_all_rules(), select=select, ignore=ignore)
     violations: list[Violation] = []
 
+    base = path if path.is_dir() else path.parent
     for file in files:
         source = _read_source(file)
         if source is None:
@@ -50,13 +51,36 @@ def check(
         tree = _parse_source(source, file)
         if tree is None:
             continue
+        file_rules = _apply_per_file_ignores(rules, file, base, config.per_file_ignores)
         suppressed = _parse_nopw_comments(source)
         for func_node in _extract_handlers(tree, config.handler_patterns):
             violations.extend(
-                _check_function(file, func_node, rules, suppressed)
+                _check_function(file, func_node, file_rules, suppressed)
             )
 
     return violations
+
+
+def _apply_per_file_ignores(
+    rules: tuple[Rule, ...],
+    file: Path,
+    base: Path,
+    per_file_ignores: tuple[tuple[str, tuple[str, ...]], ...],
+) -> tuple[Rule, ...]:
+    """Remove rules that match per-file-ignores patterns for *file*."""
+    if not per_file_ignores:
+        return rules
+    ignored_codes: set[str] = set()
+    try:
+        rel = str(file.resolve().relative_to(base.resolve()))
+    except ValueError:
+        rel = os.path.relpath(file)
+    for pattern, codes in per_file_ignores:
+        if fnmatch(rel, pattern):
+            ignored_codes.update(codes)
+    if not ignored_codes:
+        return rules
+    return tuple(r for r in rules if r.code not in ignored_codes)
 
 
 def _filter_rules(

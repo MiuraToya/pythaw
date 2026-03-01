@@ -26,6 +26,7 @@ class Config:
 
     handler_patterns: tuple[str, ...] = ("handler", "lambda_handler", "*_handler")
     exclude: tuple[str, ...] = ()
+    per_file_ignores: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
     @staticmethod
     def load() -> Config:
@@ -81,6 +82,11 @@ def _build_config(section: dict[str, Any]) -> Config:
     if "exclude" in section:
         kwargs["exclude"] = _validate_str_list(section["exclude"], "exclude")
 
+    if "per-file-ignores" in section:
+        kwargs["per_file_ignores"] = _validate_per_file_ignores(
+            section["per-file-ignores"],
+        )
+
     return Config(**kwargs)
 
 
@@ -90,3 +96,25 @@ def _validate_str_list(value: object, name: str) -> tuple[str, ...]:
         msg = f"tool.pythaw.{name} must be a list of strings"
         raise ConfigError(msg)
     return tuple(value)
+
+
+def _validate_per_file_ignores(
+    value: object,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Validate and return ``per-file-ignores`` as a tuple of (glob, codes) pairs."""
+    if not isinstance(value, dict):
+        msg = "tool.pythaw.per-file-ignores must be a table"
+        raise ConfigError(msg)
+    result: list[tuple[str, tuple[str, ...]]] = []
+    for pattern, codes in value.items():
+        if not isinstance(pattern, str):
+            msg = "tool.pythaw.per-file-ignores keys must be strings"
+            raise ConfigError(msg)
+        if not isinstance(codes, list) or not all(isinstance(c, str) for c in codes):
+            msg = (
+                f'tool.pythaw.per-file-ignores["{pattern}"]'
+                " must be a list of strings"
+            )
+            raise ConfigError(msg)
+        result.append((pattern, tuple(codes)))
+    return tuple(result)

@@ -273,6 +273,129 @@ class TestSelectIgnoreFiltering:
         assert len(violations) == 2
 
 
+class TestInlineSuppression:
+    """Verify inline suppression with '# nopw: PWXXX' comments."""
+
+    def test_nopw_suppresses_single_rule(self, tmp_path: Path) -> None:
+        """A '# nopw: PW001' comment suppresses that rule on the same line."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")  # nopw: PW001\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+    def test_nopw_suppresses_only_specified_rule(self, tmp_path: Path) -> None:
+        """Other rules on the same line are still reported."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")  # nopw: PW002\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        assert violations[0].code == "PW001"
+
+    def test_nopw_multiple_codes(self, tmp_path: Path) -> None:
+        """Comma-separated codes suppress multiple rules on one line."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")  # nopw: PW001, PW002\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+    def test_nopw_does_not_affect_other_lines(self, tmp_path: Path) -> None:
+        """Suppression only applies to the line where the comment appears."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")  # nopw: PW001\n'
+            '    boto3.client("dynamodb")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        assert violations[0].line == 4
+
+
+class TestFileLevelSuppression:
+    """Verify file-level suppression with '# pythaw: nocheck' comment."""
+
+    def test_nocheck_skips_entire_file(self, tmp_path: Path) -> None:
+        """A file starting with '# pythaw: nocheck' is completely skipped."""
+        source = (
+            "# pythaw: nocheck\n"
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+    def test_nocheck_after_shebang_and_encoding(self, tmp_path: Path) -> None:
+        """'# pythaw: nocheck' after shebang/encoding comments is still recognised."""
+        source = (
+            "#!/usr/bin/env python3\n"
+            "# -*- coding: utf-8 -*-\n"
+            "# pythaw: nocheck\n"
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+    def test_nocheck_after_code_is_ignored(self, tmp_path: Path) -> None:
+        """'# pythaw: nocheck' after a code line has no effect."""
+        source = (
+            "import boto3\n"
+            "# pythaw: nocheck\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+
+    def test_nocheck_does_not_affect_other_files(self, tmp_path: Path) -> None:
+        """Other files in the same directory are still checked."""
+        _make_files(
+            tmp_path,
+            {
+                "skip.py": (
+                    "# pythaw: nocheck\n"
+                    "import boto3\n"
+                    "def handler(event, context):\n"
+                    '    boto3.client("s3")\n'
+                ),
+                "check.py": (
+                    "import boto3\n"
+                    "def handler(event, context):\n"
+                    '    boto3.client("s3")\n'
+                ),
+            },
+        )
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        assert "check.py" in violations[0].file
+
+
 class TestCheckEdgeCases:
     """Verify edge cases for the checker."""
 

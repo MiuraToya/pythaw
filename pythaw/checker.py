@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 from fnmatch import fnmatch
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -41,11 +42,19 @@ def check(
     violations: list[Violation] = []
 
     for file in files:
-        tree = _parse_file(file)
+        source = _read_source(file)
+        if source is None:
+            continue
+        if _has_nocheck(source):
+            continue
+        tree = _parse_source(source, file)
         if tree is None:
             continue
+        suppressed = _parse_nopw_comments(source)
         for func_node in _extract_handlers(tree, config.handler_patterns):
-            violations.extend(_check_function(file, func_node, rules))
+            violations.extend(
+                _check_function(file, func_node, rules, suppressed)
+            )
 
     return violations
 
@@ -65,13 +74,50 @@ def _filter_rules(
     return filtered
 
 
-def _parse_file(file: Path) -> ast.Module | None:
-    """Parse *file* and return the AST, or ``None`` on failure."""
+_NOPW_RE = re.compile(r"#\s*nopw:\s*(PW\d+(?:\s*,\s*PW\d+)*)")
+_NOCHECK_RE = re.compile(r"^\s*#\s*pythaw:\s*nocheck\b")
+
+
+def _read_source(file: Path) -> str | None:
+    """Read *file* and return its contents, or ``None`` on failure."""
     try:
-        source = file.read_text(encoding="utf-8")
-        return ast.parse(source, filename=str(file))
-    except (SyntaxError, UnicodeDecodeError, OSError):
+        return file.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
         return None
+
+
+def _parse_source(source: str, file: Path) -> ast.Module | None:
+    """Parse *source* and return the AST, or ``None`` on failure."""
+    try:
+        return ast.parse(source, filename=str(file))
+    except SyntaxError:
+        return None
+
+
+def _has_nocheck(source: str) -> bool:
+    """Return ``True`` if *source* contains a ``# pythaw: nocheck`` directive."""
+    for line in source.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            if _NOCHECK_RE.match(stripped):
+                return True
+            continue
+        break
+    return False
+
+
+def _parse_nopw_comments(source: str) -> dict[int, frozenset[str]]:
+    """Extract per-line ``# nopw: PWXXX`` suppression directives.
+
+    Returns a mapping of line number to the set of suppressed rule codes.
+    """
+    suppressed: dict[int, frozenset[str]] = {}
+    for lineno, line in enumerate(source.splitlines(), start=1):
+        m = _NOPW_RE.search(line)
+        if m:
+            codes = frozenset(c.strip() for c in m.group(1).split(","))
+            suppressed[lineno] = codes
+    return suppressed
 
 
 def _extract_handlers(
@@ -93,6 +139,7 @@ def _check_function(
     file: Path,
     func_node: FunctionNode,
     rules: tuple[Rule, ...],
+    suppressed: dict[int, frozenset[str]],
 ) -> list[Violation]:
     """Walk *func_node* and return violations for any matching Call nodes."""
     return [
@@ -107,4 +154,5 @@ def _check_function(
         if isinstance(node, ast.Call)
         for rule in rules
         if rule.check(node)
+        and rule.code not in suppressed.get(node.lineno, frozenset())
     ]

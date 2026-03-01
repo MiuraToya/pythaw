@@ -66,9 +66,15 @@ class TestRulesE2E:
         result = _run_pythaw("rules", cwd=tmp_path)
         assert result.returncode == 0
         for code in (
-            "PW001", "PW002", "PW003",
-            "PW004", "PW005", "PW006",
-            "PW007", "PW008", "PW009",
+            "PW001",
+            "PW002",
+            "PW003",
+            "PW004",
+            "PW005",
+            "PW006",
+            "PW007",
+            "PW008",
+            "PW009",
         ):
             assert code in result.stdout
 
@@ -78,8 +84,17 @@ class TestRuleE2E:
 
     @pytest.mark.parametrize(
         "code",
-        ["PW001", "PW002", "PW003", "PW004", "PW005",
-         "PW006", "PW007", "PW008", "PW009"],
+        [
+            "PW001",
+            "PW002",
+            "PW003",
+            "PW004",
+            "PW005",
+            "PW006",
+            "PW007",
+            "PW008",
+            "PW009",
+        ],
     )
     def test_shows_rule_detail(self, tmp_path: Path, code: str) -> None:
         """Shows what/why/example for each rule."""

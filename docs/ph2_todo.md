@@ -1,6 +1,6 @@
 # Phase 2 実装 TODO
 
-- [ ] rules/pw004-pw009 — 追加ルール
+- [x] rules/pw004-pw009 — 追加ルール
 - [ ] cli.py — --select / --ignore
 - [ ] cli.py — --exit-zero / --statistics
 - [ ] formatters/json, github, sarif — 追加フォーマッター + --format

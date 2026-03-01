@@ -16,24 +16,29 @@ if TYPE_CHECKING:
 
 console = Console(highlight=False)
 
-STYLE_COLD = "bold deep_sky_blue1"
+STYLE_COLD = "bold sky_blue1"
 STYLE_SUCCESS = "bold dark_orange"
 STYLE_LOCATION = "bold"
 
 
 def print_violations(violations: list[Violation]) -> None:
     """Print violations with colour-coded output."""
-    for v in violations:
+    for i, v in enumerate(violations):
+        if i > 0:
+            console.print()
         line = Text()
-        line.append(f"{v.file}:{v.line}:{v.col}: ", style=STYLE_LOCATION)
         line.append(f"{v.code} ", style=STYLE_COLD)
         line.append(v.message)
         console.print(line)
+        loc = Text()
+        loc.append("  --> ", style=STYLE_COLD)
+        loc.append(f"{v.file}:{v.line}:{v.col}", style=STYLE_LOCATION)
+        console.print(loc)
 
         for depth, site in enumerate(v.call_chain):
             indent = "  " * (depth + 1)
             via = Text()
-            via.append(f"{indent}\u2192 ", style=STYLE_COLD)
+            via.append(f"  {indent}\u2192 ", style=STYLE_COLD)
             via.append(f"{site.file}:{site.line}:{site.col} ", style=STYLE_LOCATION)
             via.append(site.name, style=STYLE_COLD)
             console.print(via)

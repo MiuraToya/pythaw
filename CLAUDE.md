@@ -2,7 +2,8 @@
 
 ## Project Overview
 
-pythaw is a static analysis CLI tool that detects heavy initialization inside AWS Lambda Python handlers.
+pythaw is a Python static analysis tool that detects heavy initialization and connection-establishing resource creation inside AWS Lambda handlers.
+It recursively follows function calls from handler functions—including across imported files—to catch indirect violations.
 See [docs/spec.md](docs/spec.md) for the specification and [docs/adr/0001-architecture.md](docs/adr/0001-architecture.md) for architecture decisions.
 
 ## Expected Role

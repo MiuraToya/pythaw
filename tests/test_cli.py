@@ -80,11 +80,7 @@ class TestExitZeroOption:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """--exit-zero returns 0 even when violations exist."""
-        source = (
-            "import boto3\n"
-            "def handler(event, context):\n"
-            '    boto3.client("s3")\n'
-        )
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
         _make_files(tmp_path, {"app.py": source})
         with (
             patch("pythaw.finder._git_ls_files", return_value=None),
@@ -95,9 +91,7 @@ class TestExitZeroOption:
         out = capsys.readouterr().out
         assert "PW001" in out
 
-    def test_exit_zero_without_violations(
-        self, tmp_path: Path
-    ) -> None:
+    def test_exit_zero_without_violations(self, tmp_path: Path) -> None:
         """--exit-zero still returns 0 when no violations."""
         source = "def handler(event, context):\n    return 200\n"
         _make_files(tmp_path, {"app.py": source})

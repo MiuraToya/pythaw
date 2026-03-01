@@ -89,6 +89,18 @@ pythaw rule PW001                      # Show rule details
 
 pythaw recursively follows local function calls and imported modules from the handler, detecting indirect violations across files.
 
+### Supported patterns
+
+| Pattern | Example |
+|---------|---------|
+| Same-file function call | `helper()` |
+| Module-qualified function call | `infra.get_client()` |
+| Class method call | `AwsProvider.get_client()` |
+| Class instantiation (`__init__`) | `S3Client()` |
+| Cross-file import tracking | `from infra import get_client` |
+
+> **Note:** Instance method calls via variables (e.g. `obj = Cls(); obj.method()`) are not tracked — this would require data-flow analysis beyond the current scope.
+
 ```
 infra/aws.py:4:15: PW001 boto3.client() should be called at module scope
   → handler.py:2:10 get_client()

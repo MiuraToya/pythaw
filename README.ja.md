@@ -86,6 +86,18 @@ pythaw rule PW001                      # ルールの詳細説明
 
 ハンドラーが呼び出すローカル関数や import 先のモジュールも再帰的に辿り、間接的な違反を検出する。
 
+### 対応パターン
+
+| パターン | 例 |
+|---------|---|
+| 同一ファイルの関数呼び出し | `helper()` |
+| モジュール経由の関数呼び出し | `infra.get_client()` |
+| クラスメソッド呼び出し | `AwsProvider.get_client()` |
+| クラスのインスタンス化 (`__init__`) | `S3Client()` |
+| import 先のファイルへの追跡 | `from infra import get_client` |
+
+> **Note:** 変数経由のインスタンスメソッド呼び出し（例: `obj = Cls(); obj.method()`）は追跡対象外。データフロー解析が必要となるため現在のスコープ外。
+
 ```
 infra/aws.py:4:15: PW001 boto3.client() should be called at module scope
   → handler.py:2:10 get_client()

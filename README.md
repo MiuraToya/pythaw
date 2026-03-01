@@ -10,6 +10,8 @@ It recursively follows function calls from handler functions—including across 
 
 ```bash
 pip install pythaw
+# or
+uv add pythaw
 ```
 
 ## Quick Start

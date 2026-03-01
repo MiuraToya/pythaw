@@ -6,6 +6,10 @@ A Python static analysis tool that detects heavy initialization and connection-e
 
 It recursively follows function calls from handler functions—including across imported files—to catch indirect violations.
 
+## Requirements
+
+Python 3.10 - 3.14 — matching the actively supported AWS Lambda Python runtimes.
+
 ## Install
 
 ```bash

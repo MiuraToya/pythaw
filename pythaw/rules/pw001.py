@@ -37,6 +37,7 @@ class Boto3ClientRule(Rule):
     )
 
     def check(self, node: ast.Call) -> bool:
+        """Return True if *node* is a ``boto3.client(...)`` call."""
         return (
             isinstance(node.func, ast.Attribute)
             and isinstance(node.func.value, ast.Name)

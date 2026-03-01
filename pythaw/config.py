@@ -17,17 +17,28 @@ class ConfigError(Exception):
 
 @dataclass(frozen=True)
 class Config:
-    """Project configuration loaded from pyproject.toml."""
+    """Project configuration loaded from ``pyproject.toml``.
+
+    Attributes:
+        handler_patterns: fnmatch patterns to identify handler functions.
+        exclude: fnmatch patterns to exclude files/directories from scanning.
+    """
 
     handler_patterns: tuple[str, ...] = ("handler", "lambda_handler", "*_handler")
     exclude: tuple[str, ...] = ()
 
     @staticmethod
     def load() -> Config:
-        """Load config from pyproject.toml.
+        """Load config from ``pyproject.toml``.
 
-        Search for pyproject.toml in the current directory and parent
-        directories.  If not found, return default config.
+        Searches for ``pyproject.toml`` in the current directory and parent
+        directories. If not found, returns default config.
+
+        Returns:
+            A Config instance populated from ``[tool.pythaw]``, or defaults.
+
+        Raises:
+            ConfigError: If the TOML file is invalid or contains bad values.
         """
         toml_path = _find_pyproject()
         if toml_path is None:

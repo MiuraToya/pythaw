@@ -16,6 +16,13 @@ def find_files(path: Path, config: Config) -> list[Path]:
     When *path* is a regular file it is returned directly (no filtering).
     When *path* is a directory, ``*.py`` files are discovered recursively,
     respecting ``.gitignore`` and the ``exclude`` patterns in *config*.
+
+    Args:
+        path: File or directory to scan.
+        config: Project configuration (excludes, etc.).
+
+    Returns:
+        A sorted list of resolved absolute paths to ``*.py`` files.
     """
     target = path.resolve()
 

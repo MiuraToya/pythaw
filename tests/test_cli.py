@@ -41,7 +41,7 @@ class TestCheckSubcommand:
     def test_no_violations_exit_code_0(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Exits with code 0 and prints nothing when no issues are found."""
+        """Exits with code 0 and prints a success message when no issues are found."""
         source = "def handler(event, context):\n    return 200\n"
         _make_files(tmp_path, {"app.py": source})
         with (
@@ -50,7 +50,7 @@ class TestCheckSubcommand:
         ):
             main(["check", str(tmp_path)])
         assert exc_info.value.code == 0
-        assert capsys.readouterr().out == ""
+        assert capsys.readouterr().out == "All checks passed!\n"
 
     def test_config_error_exit_code_2(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

@@ -91,7 +91,7 @@ pythaw rule PW001                      # ルールの詳細説明
 
 ```
 infra/aws.py:4:15: PW001 boto3.client() should be called at module scope
-  via handler.py:2:10 → get_client()
+  → handler.py:2:10 get_client()
 
 Found 1 violation in 1 file.
 ```

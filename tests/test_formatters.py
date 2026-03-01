@@ -6,7 +6,7 @@ from pythaw.formatters import ConciseFormatter, get_formatter
 from pythaw.formatters.github import GithubFormatter
 from pythaw.formatters.json import JsonFormatter
 from pythaw.formatters.sarif import SarifFormatter
-from pythaw.violation import Violation
+from pythaw.violation import CallSite, Violation
 
 
 class TestConciseFormatter:
@@ -75,6 +75,59 @@ class TestConciseFormatter:
         """Empty violation list returns empty string."""
         result = self.formatter.format([])
         assert result == ""
+
+    def test_via_line_for_indirect_violation(self) -> None:
+        """Indirect violations include a 'via' line showing the call chain."""
+        violations = [
+            Violation(
+                file="infra/aws.py",
+                line=4,
+                col=15,
+                code="PW001",
+                message="boto3.client() should be called at module scope",
+                call_chain=(
+                    CallSite(
+                        file="handler.py", line=2, col=10, name="get_client()"
+                    ),
+                ),
+            ),
+        ]
+        result = self.formatter.format(violations)
+        lines = result.splitlines()
+        assert lines[0] == (
+            "infra/aws.py:4:15: PW001"
+            " boto3.client() should be called at module scope"
+        )
+        assert lines[1] == "  via handler.py:2:10 \u2192 get_client()"
+
+    def test_via_line_multi_level_chain(self) -> None:
+        """Multi-level call chains show all intermediate steps."""
+        violations = [
+            Violation(
+                file="infra/aws.py",
+                line=4,
+                col=15,
+                code="PW001",
+                message="boto3.client() should be called at module scope",
+                call_chain=(
+                    CallSite(
+                        file="handler.py", line=2, col=10, name="S3Client()"
+                    ),
+                    CallSite(
+                        file="infra/client.py",
+                        line=8,
+                        col=4,
+                        name="AwsProvider.get_client()",
+                    ),
+                ),
+            ),
+        ]
+        result = self.formatter.format(violations)
+        lines = result.splitlines()
+        assert lines[1] == (
+            "  via handler.py:2:10 \u2192 S3Client()"
+            " \u2192 AwsProvider.get_client()"
+        )
 
 
 SAMPLE_VIOLATIONS = [

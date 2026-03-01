@@ -7,8 +7,9 @@ from fnmatch import fnmatch
 from typing import TYPE_CHECKING, TypeAlias
 
 from pythaw.finder import find_files
+from pythaw.resolver import Resolver
 from pythaw.rules import get_all_rules
-from pythaw.violation import Violation
+from pythaw.violation import CallSite, Violation
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -42,6 +43,7 @@ def check(
     violations: list[Violation] = []
 
     base = path if path.is_dir() else path.parent
+    resolver = Resolver(base)
     for file in files:
         source = _read_source(file)
         if source is None:
@@ -55,7 +57,9 @@ def check(
         suppressed = _parse_nopw_comments(source)
         for func_node in _extract_handlers(tree, config.handler_patterns):
             violations.extend(
-                _check_function(file, func_node, file_rules, suppressed)
+                _check_function(
+                    file, func_node, file_rules, suppressed, resolver,
+                )
             )
 
     return violations
@@ -159,24 +163,94 @@ def _extract_handlers(
     ]
 
 
-def _check_function(
+def _check_function(  # noqa: PLR0913
     file: Path,
     func_node: FunctionNode,
     rules: tuple[Rule, ...],
     suppressed: dict[int, frozenset[str]],
+    resolver: Resolver,
+    *,
+    chain: tuple[CallSite, ...] = (),
+    visited: set[tuple[str, str]] | None = None,
 ) -> list[Violation]:
-    """Walk *func_node* and return violations for any matching Call nodes."""
-    return [
-        Violation(
-            file=os.path.relpath(file),
-            line=node.lineno,
-            col=node.col_offset,
-            code=rule.code,
-            message=rule.message,
+    """Walk *func_node* and return violations, following local calls."""
+    if visited is None:
+        visited = set()
+
+    violations: list[Violation] = []
+    for node in ast.walk(func_node):
+        if not isinstance(node, ast.Call):
+            continue
+
+        # Check rule violations
+        suppressed_codes = suppressed.get(node.lineno, frozenset())
+        violations.extend(
+            Violation(
+                file=os.path.relpath(file),
+                line=node.lineno,
+                col=node.col_offset,
+                code=rule.code,
+                message=rule.message,
+                call_chain=chain,
+            )
+            for rule in rules
+            if rule.check(node) and rule.code not in suppressed_codes
         )
-        for node in ast.walk(func_node)
-        if isinstance(node, ast.Call)
-        for rule in rules
-        if rule.check(node)
-        and rule.code not in suppressed.get(node.lineno, frozenset())
-    ]
+
+        # Follow resolved local calls
+        _follow_call(
+            file, node, rules, resolver, chain, visited, violations,
+        )
+
+    return violations
+
+
+def _follow_call(  # noqa: PLR0913
+    file: Path,
+    node: ast.Call,
+    rules: tuple[Rule, ...],
+    resolver: Resolver,
+    chain: tuple[CallSite, ...],
+    visited: set[tuple[str, str]],
+    violations: list[Violation],
+) -> None:
+    """Resolve *node* and recursively check the target definition."""
+    target = resolver.resolve_call(file, node)
+    if target is None:
+        return
+    target_file, target_defn = target
+
+    walkable: FunctionNode | None
+    if isinstance(target_defn, ast.ClassDef):
+        walkable = resolver.get_init(target_defn)
+    else:
+        walkable = target_defn
+    if walkable is None:
+        return
+
+    key = (str(target_file.resolve()), target_defn.name)
+    if key in visited:
+        return
+    visited.add(key)
+
+    site = CallSite(
+        file=os.path.relpath(file),
+        line=node.lineno,
+        col=node.col_offset,
+        name=resolver.call_display_name(node),
+    )
+    target_source = resolver.read_source(target_file)
+    target_suppressed = (
+        _parse_nopw_comments(target_source) if target_source else {}
+    )
+    violations.extend(
+        _check_function(
+            target_file,
+            walkable,
+            rules,
+            target_suppressed,
+            resolver,
+            chain=(*chain, site),
+            visited=visited,
+        )
+    )

@@ -1,8 +1,8 @@
 # pythaw
 
-AWS Lambda handler 内の重い初期化処理やコネクションを伴うリソース生成を検出する Python 静的解析ツール。
+A Python static analysis tool that detects heavy initialization and connection-establishing resource creation inside AWS Lambda handlers.
 
-ハンドラー関数からの関数呼び出しを再帰的に辿り、import 先のファイルも含めて検出する。
+It recursively follows function calls from handler functions—including across imported files—to catch indirect violations.
 
 ## Install
 
@@ -16,8 +16,9 @@ pip install pythaw
 # handler.py
 
 def lambda_handler(event, context):
-    # NG: handler 内で boto3 クライアントを生成すると
-    #     毎回初期化が走り、ウォームスタートの恩恵を受けられない
+    # BAD: Creating a boto3 client inside the handler
+    #      runs initialization on every invocation,
+    #      losing the benefit of warm starts.
     client = boto3.client("s3")
     return client.get_object(Bucket="my-bucket", Key=event["key"])
 ```
@@ -29,10 +30,10 @@ handler.py:6:14: PW001 boto3.client() should be called at module scope
 Found 1 violation in 1 file.
 ```
 
-モジュールスコープに移動することで、Lambda のコンテナ再利用時に初期化をスキップできる。
+Move the client to module scope so Lambda container reuse skips the initialization:
 
 ```python
-# handler.py (修正後)
+# handler.py (fixed)
 
 client = boto3.client("s3")
 
@@ -43,29 +44,29 @@ def lambda_handler(event, context):
 ## Usage
 
 ```bash
-pythaw check <path>          # ファイルまたはディレクトリをチェック
-pythaw check . --format json # JSON 形式で出力
-pythaw check . --format github  # GitHub Actions アノテーション形式
-pythaw check . --format sarif   # SARIF 形式（Code Scanning 連携）
-pythaw check . --select PW001,PW002  # 特定ルールのみ有効化
-pythaw check . --ignore PW003       # 特定ルールを無効化
-pythaw check . --exit-zero          # 違反があっても終了コード 0
-pythaw check . --statistics         # ルール別違反数を集計表示
-pythaw rules                 # ビルトインルール一覧
-pythaw rule PW001            # ルールの詳細説明
+pythaw check <path>                    # Check a file or directory
+pythaw check . --format json           # JSON output
+pythaw check . --format github         # GitHub Actions annotation format
+pythaw check . --format sarif          # SARIF format (Code Scanning integration)
+pythaw check . --select PW001,PW002    # Enable only specific rules
+pythaw check . --ignore PW003          # Disable specific rules
+pythaw check . --exit-zero             # Always exit with code 0
+pythaw check . --statistics            # Show per-rule violation counts
+pythaw rules                           # List built-in rules
+pythaw rule PW001                      # Show rule details
 ```
 
-### 終了コード
+### Exit Codes
 
-| コード | 意味 |
-|--------|------|
-| 0 | 問題なし |
-| 1 | 違反あり |
-| 2 | ツールエラー（設定不正等） |
+| Code | Meaning |
+|------|---------|
+| 0 | No violations found |
+| 1 | Violations found |
+| 2 | Tool error (invalid config, etc.) |
 
 ## Rules
 
-| ID    | 検出対象 |
+| ID    | Detects |
 |-------|---------|
 | PW001 | `boto3.client()` |
 | PW002 | `boto3.resource()` |
@@ -79,7 +80,7 @@ pythaw rule PW001            # ルールの詳細説明
 
 ## Call Graph Traversal
 
-ハンドラーが呼び出すローカル関数や import 先のモジュールも再帰的に辿り、間接的な違反を検出する。
+pythaw recursively follows local function calls and imported modules from the handler, detecting indirect violations across files.
 
 ```
 infra/aws.py:4:15: PW001 boto3.client() should be called at module scope
@@ -90,39 +91,39 @@ Found 1 violation in 1 file.
 
 ## Suppression
 
-### インライン抑制
+### Inline suppression
 
-行末に `# nopw: <code>` を付けるとその行の違反を抑制できる。カンマ区切りで複数指定可能。
+Append `# nopw: <code>` to a line to suppress that violation. Multiple codes can be comma-separated.
 
 ```python
 client = boto3.client("s3")  # nopw: PW001
 ```
 
-### ファイルレベル抑制
+### File-level suppression
 
-ファイル先頭のコメントブロック内に `# pythaw: nocheck` と記述するとファイル全体をスキップする。
+Add `# pythaw: nocheck` in the leading comment block to skip the entire file.
 
 ```python
 # pythaw: nocheck
 import boto3
 
 def handler(event, context):
-    boto3.client("s3")  # チェックされない
+    boto3.client("s3")  # not checked
 ```
 
 ## Configuration
 
-`pyproject.toml` の `[tool.pythaw]` セクションで設定を行う。
+Configure via the `[tool.pythaw]` section in `pyproject.toml`.
 
 ```toml
 [tool.pythaw]
-# handler として認識する関数名パターン（fnmatch 形式）
+# Function name patterns recognized as handlers (fnmatch syntax)
 handler_patterns = ["handler", "lambda_handler", "*_handler"]
 
-# 探索対象から除外するパターン
+# Patterns to exclude from scanning
 exclude = [".venv", "tests"]
 
-# ファイルパターンごとにルールを無効化
+# Disable specific rules per file pattern
 [tool.pythaw.per-file-ignores]
 "tests/*" = ["PW001", "PW002"]
 "scripts/*" = ["PW001"]
@@ -131,9 +132,9 @@ exclude = [".venv", "tests"]
 ## Development
 
 ```bash
-uv sync                # 依存関係のインストール
-uv run pytest          # テスト実行
-uv run ruff check .    # リント
-uv run ruff format .   # フォーマット
-uv run mypy pythaw     # 型チェック
+uv sync                # Install dependencies
+uv run pytest          # Run tests
+uv run ruff check .    # Lint
+uv run ruff format .   # Format
+uv run mypy pythaw     # Type check
 ```

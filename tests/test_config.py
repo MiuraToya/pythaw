@@ -97,8 +97,8 @@ class TestConfigLoad:
     def test_load_per_file_ignores(self, tmp_path: Path) -> None:
         """per-file-ignores section is read as (glob, codes) pairs."""
         (tmp_path / "pyproject.toml").write_text(
-            '[tool.pythaw]\n'
-            '[tool.pythaw.per-file-ignores]\n'
+            "[tool.pythaw]\n"
+            "[tool.pythaw.per-file-ignores]\n"
             '"tests/*" = ["PW001", "PW002"]\n'
         )
         original = _chdir(tmp_path)
@@ -171,9 +171,7 @@ class TestConfigValidation:
     def test_per_file_ignores_bad_values(self, tmp_path: Path) -> None:
         """Non-list values in per-file-ignores raises ConfigError."""
         (tmp_path / "pyproject.toml").write_text(
-            '[tool.pythaw]\n'
-            '[tool.pythaw.per-file-ignores]\n'
-            '"tests/*" = "PW001"\n'
+            '[tool.pythaw]\n[tool.pythaw.per-file-ignores]\n"tests/*" = "PW001"\n'
         )
         original = _chdir(tmp_path)
         try:

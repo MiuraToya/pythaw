@@ -111,10 +111,7 @@ def _validate_per_file_ignores(
             msg = "tool.pythaw.per-file-ignores keys must be strings"
             raise ConfigError(msg)
         if not isinstance(codes, list) or not all(isinstance(c, str) for c in codes):
-            msg = (
-                f'tool.pythaw.per-file-ignores["{pattern}"]'
-                " must be a list of strings"
-            )
+            msg = f'tool.pythaw.per-file-ignores["{pattern}"] must be a list of strings'
             raise ConfigError(msg)
         result.append((pattern, tuple(codes)))
     return tuple(result)

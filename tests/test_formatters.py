@@ -86,17 +86,14 @@ class TestConciseFormatter:
                 code="PW001",
                 message="boto3.client() should be called at module scope",
                 call_chain=(
-                    CallSite(
-                        file="handler.py", line=2, col=10, name="get_client()"
-                    ),
+                    CallSite(file="handler.py", line=2, col=10, name="get_client()"),
                 ),
             ),
         ]
         result = self.formatter.format(violations)
         lines = result.splitlines()
         assert lines[0] == (
-            "infra/aws.py:4:15: PW001"
-            " boto3.client() should be called at module scope"
+            "infra/aws.py:4:15: PW001 boto3.client() should be called at module scope"
         )
         assert lines[1] == "  via handler.py:2:10 \u2192 get_client()"
 
@@ -110,9 +107,7 @@ class TestConciseFormatter:
                 code="PW001",
                 message="boto3.client() should be called at module scope",
                 call_chain=(
-                    CallSite(
-                        file="handler.py", line=2, col=10, name="S3Client()"
-                    ),
+                    CallSite(file="handler.py", line=2, col=10, name="S3Client()"),
                     CallSite(
                         file="infra/client.py",
                         line=8,
@@ -125,8 +120,7 @@ class TestConciseFormatter:
         result = self.formatter.format(violations)
         lines = result.splitlines()
         assert lines[1] == (
-            "  via handler.py:2:10 \u2192 S3Client()"
-            " \u2192 AwsProvider.get_client()"
+            "  via handler.py:2:10 \u2192 S3Client() \u2192 AwsProvider.get_client()"
         )
 
 

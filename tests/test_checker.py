@@ -462,6 +462,169 @@ class TestPerFileIgnores:
         assert len(violations) == 1
 
 
+class TestCallChainResolution:
+    """Verify call graph traversal and call_chain population."""
+
+    def test_same_file_function_call(self, tmp_path: Path) -> None:
+        """A helper function in the same file is followed and violations reported."""
+        source = (
+            "import boto3\n"
+            "\n"
+            "def helper():\n"
+            '    boto3.client("s3")\n'
+            "\n"
+            "def handler(event, context):\n"
+            "    helper()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        v = violations[0]
+        assert v.code == "PW001"
+        assert v.line == 4
+        assert len(v.call_chain) == 1
+        assert v.call_chain[0].name == "helper()"
+
+    def test_cross_file_import_resolution(self, tmp_path: Path) -> None:
+        """A function imported from another local file is followed."""
+        _make_files(
+            tmp_path,
+            {
+                "infra.py": (
+                    "import boto3\n"
+                    "\n"
+                    "def get_client():\n"
+                    '    return boto3.client("s3")\n'
+                ),
+                "app.py": (
+                    "from infra import get_client\n"
+                    "\n"
+                    "def handler(event, context):\n"
+                    "    get_client()\n"
+                ),
+            },
+        )
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        v = violations[0]
+        assert v.code == "PW001"
+        assert "infra.py" in v.file
+        assert len(v.call_chain) == 1
+        assert v.call_chain[0].name == "get_client()"
+
+    def test_module_attribute_call(self, tmp_path: Path) -> None:
+        """A call via module.func() resolves across files."""
+        _make_files(
+            tmp_path,
+            {
+                "infra.py": (
+                    "import boto3\n"
+                    "\n"
+                    "def get_client():\n"
+                    '    return boto3.client("s3")\n'
+                ),
+                "app.py": (
+                    "import infra\n"
+                    "\n"
+                    "def handler(event, context):\n"
+                    "    infra.get_client()\n"
+                ),
+            },
+        )
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        v = violations[0]
+        assert v.code == "PW001"
+        assert len(v.call_chain) == 1
+        assert v.call_chain[0].name == "infra.get_client()"
+
+    def test_multi_level_chain(self, tmp_path: Path) -> None:
+        """Call chains across multiple functions are tracked."""
+        source = (
+            "import boto3\n"
+            "\n"
+            "def level2():\n"
+            '    boto3.client("s3")\n'
+            "\n"
+            "def level1():\n"
+            "    level2()\n"
+            "\n"
+            "def handler(event, context):\n"
+            "    level1()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        v = violations[0]
+        assert v.code == "PW001"
+        assert len(v.call_chain) == 2
+        assert v.call_chain[0].name == "level1()"
+        assert v.call_chain[1].name == "level2()"
+
+    def test_circular_call_does_not_loop(self, tmp_path: Path) -> None:
+        """Circular function calls are handled without infinite recursion."""
+        source = (
+            "def foo():\n"
+            "    bar()\n"
+            "\n"
+            "def bar():\n"
+            "    foo()\n"
+            "\n"
+            "def handler(event, context):\n"
+            "    foo()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+    def test_class_init_is_followed(self, tmp_path: Path) -> None:
+        """Class instantiation follows __init__ for violations."""
+        source = (
+            "import boto3\n"
+            "\n"
+            "class Client:\n"
+            "    def __init__(self):\n"
+            '        self.c = boto3.client("s3")\n'
+            "\n"
+            "def handler(event, context):\n"
+            "    Client()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        v = violations[0]
+        assert v.code == "PW001"
+        assert len(v.call_chain) == 1
+        assert v.call_chain[0].name == "Client()"
+
+    def test_direct_violation_has_empty_chain(self, tmp_path: Path) -> None:
+        """Direct violations in the handler have an empty call_chain."""
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        assert violations[0].call_chain == ()
+
+    def test_unresolvable_call_is_skipped(self, tmp_path: Path) -> None:
+        """Calls to stdlib/third-party functions are silently skipped."""
+        source = (
+            "import json\n"
+            "def handler(event, context):\n"
+            "    json.loads('{}')\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+
 class TestCheckEdgeCases:
     """Verify edge cases for the checker."""
 

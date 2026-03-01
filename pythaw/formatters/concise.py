@@ -22,7 +22,16 @@ class ConciseFormatter(Formatter):
         if not violations:
             return ""
 
-        lines = [f"{v.file}:{v.line}:{v.col}: {v.code} {v.message}" for v in violations]
+        lines: list[str] = []
+        for v in violations:
+            lines.append(
+                f"{v.file}:{v.line}:{v.col}: {v.code} {v.message}"
+            )
+            if v.call_chain:
+                first = v.call_chain[0]
+                parts = [f"{first.file}:{first.line}:{first.col}"]
+                parts.extend(site.name for site in v.call_chain)
+                lines.append("  via " + " \u2192 ".join(parts))
 
         file_count = len({v.file for v in violations})
         violation_count = len(violations)

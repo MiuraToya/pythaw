@@ -130,6 +130,100 @@ class TestStatisticsOption:
         assert "PW002  1" in out
 
 
+class TestSelectIgnoreOptions:
+    """Verify --select and --ignore CLI options."""
+
+    def test_select_filters_to_specified_rules(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--select only reports violations for the specified rule codes."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--select", "PW001"])
+        assert exc_info.value.code == 1
+        out = capsys.readouterr().out
+        assert "PW001" in out
+        assert "PW002" not in out
+
+    def test_ignore_excludes_specified_rules(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--ignore suppresses violations for the specified rule codes."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--ignore", "PW001"])
+        assert exc_info.value.code == 1
+        out = capsys.readouterr().out
+        assert "PW001" not in out
+        assert "PW002" in out
+
+    def test_select_multiple_codes(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--select accepts comma-separated rule codes."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+            "    boto3.Session()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--select", "PW001,PW002"])
+        assert exc_info.value.code == 1
+        out = capsys.readouterr().out
+        assert "PW001" in out
+        assert "PW002" in out
+        assert "PW003" not in out
+
+    def test_ignore_all_violations_passes(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--ignore all violating rules results in exit code 0."""
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--ignore", "PW001"])
+        assert exc_info.value.code == 0
+        assert "All checks passed!" in capsys.readouterr().out
+
+    def test_select_nonexistent_code_passes(self, tmp_path: Path) -> None:
+        """--select with a code that has no violations results in exit code 0."""
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--select", "PW002"])
+        assert exc_info.value.code == 0
+
+
 class TestFormatOption:
     """Verify --format CLI option."""
 

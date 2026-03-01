@@ -18,18 +18,26 @@ if TYPE_CHECKING:
 FunctionNode: TypeAlias = ast.FunctionDef | ast.AsyncFunctionDef
 
 
-def check(path: Path, config: Config) -> list[Violation]:
+def check(
+    path: Path,
+    config: Config,
+    *,
+    select: frozenset[str] = frozenset(),
+    ignore: frozenset[str] = frozenset(),
+) -> list[Violation]:
     """Run all rules against handler functions found under *path*.
 
     Args:
         path: File or directory to check.
         config: Project configuration (handler patterns, excludes, etc.).
+        select: If non-empty, only run rules whose codes are in this set.
+        ignore: Rule codes to skip.
 
     Returns:
         A list of violations found across all handler functions.
     """
     files = find_files(path, config)
-    rules = get_all_rules()
+    rules = _filter_rules(get_all_rules(), select=select, ignore=ignore)
     violations: list[Violation] = []
 
     for file in files:
@@ -40,6 +48,21 @@ def check(path: Path, config: Config) -> list[Violation]:
             violations.extend(_check_function(file, func_node, rules))
 
     return violations
+
+
+def _filter_rules(
+    rules: tuple[Rule, ...],
+    *,
+    select: frozenset[str],
+    ignore: frozenset[str],
+) -> tuple[Rule, ...]:
+    """Filter rules by *select* and *ignore* code sets."""
+    filtered = rules
+    if select:
+        filtered = tuple(r for r in filtered if r.code in select)
+    if ignore:
+        filtered = tuple(r for r in filtered if r.code not in ignore)
+    return filtered
 
 
 def _parse_file(file: Path) -> ast.Module | None:

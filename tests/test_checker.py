@@ -17,6 +17,105 @@ def _make_files(base: Path, files: dict[str, str]) -> None:
         p.write_text(content)
 
 
+HANDLER_SRC = "def handler(event, context):\n    pass\n"
+
+
+# ---------------------------------------------------------------------------
+# Handler extraction (tested via check)
+# ---------------------------------------------------------------------------
+
+
+class TestHandlerPatternMatching:
+    """Verify handler discovery with fnmatch pattern matching."""
+
+    @pytest.mark.parametrize(
+        ("func_name", "should_match"),
+        [
+            ("handler", True),
+            ("my_handler", True),
+            ("process_data", False),
+        ],
+    )
+    def test_default_pattern_matching(
+        self, tmp_path: Path, func_name: str, *, should_match: bool
+    ) -> None:
+        """Default patterns match 'handler' and '*_handler' but not arbitrary names."""
+        source = (
+            "import boto3\n"
+            f"def {func_name}(event, context):\n"
+            '    boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        if should_match:
+            assert len(violations) == 1
+        else:
+            assert violations == []
+
+    def test_custom_handler_patterns(self, tmp_path: Path) -> None:
+        """Uses handler_patterns from config instead of defaults."""
+        source = "import boto3\ndef my_entry(event, context):\n    boto3.client('s3')\n"
+        _make_files(tmp_path, {"app.py": source})
+        cfg = Config(handler_patterns=("my_entry",))
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, cfg)
+        assert len(violations) == 1
+
+    def test_only_checks_top_level_functions(self, tmp_path: Path) -> None:
+        """Nested functions and class methods are not detected as handlers."""
+        source = (
+            "import boto3\n"
+            "class MyClass:\n"
+            "    def handler(self):\n"
+            "        boto3.client('s3')\n"
+            "\n"
+            "def outer():\n"
+            "    def handler():\n"
+            "        boto3.client('s3')\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+    def test_multiple_handlers_in_one_file(self, tmp_path: Path) -> None:
+        """Multiple matching functions in a single file are all checked."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            "    boto3.client('s3')\n"
+            "\n"
+            "def lambda_handler(event, context):\n"
+            "    boto3.resource('s3')\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        codes = sorted(v.code for v in violations)
+        assert codes == ["PW001", "PW002"]
+
+    def test_async_handler(self, tmp_path: Path) -> None:
+        """Async handler functions are also detected."""
+        source = "import boto3\nasync def handler(event, context):\n    boto3.client('s3')\n"
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+
+    def test_single_file_path(self, tmp_path: Path) -> None:
+        """A single file path is checked directly for handlers."""
+        py = tmp_path / "app.py"
+        py.write_text("import boto3\ndef handler(event, context):\n    boto3.client('s3')\n")
+        violations = check(py, Config())
+        assert len(violations) == 1
+
+
+# ---------------------------------------------------------------------------
+# Violation detection
+# ---------------------------------------------------------------------------
+
+
 class TestCheckDirectViolations:
     """Verify detection of rule violations directly inside handler functions."""
 

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import ast
 import os
+from fnmatch import fnmatch
 from typing import TYPE_CHECKING
 
-from pythaw.finder import find_handlers
+from pythaw.finder import find_files
 from pythaw.rules import get_all_rules
 from pythaw.violation import Violation
 
@@ -17,48 +18,42 @@ if TYPE_CHECKING:
 
 def check(path: Path, config: Config) -> list[Violation]:
     """Run all rules against handler functions found under *path*."""
-    handlers = find_handlers(path, config)
+    files = find_files(path, config)
     rules = get_all_rules()
     violations: list[Violation] = []
 
-    parsed: dict[Path, ast.Module | None] = {}
-    for handler in handlers:
-        tree = _get_tree(handler.file, parsed)
+    for file in files:
+        tree = _parse_file(file)
         if tree is None:
             continue
-        func_node = _find_function_node(tree, handler.name, handler.lineno)
-        if func_node is None:
-            continue
-        violations.extend(_check_function(handler.file, func_node, rules))
+        for func_node in _extract_handlers(tree, config.handler_patterns):
+            violations.extend(_check_function(file, func_node, rules))
 
     return violations
 
 
-def _get_tree(file: Path, cache: dict[Path, ast.Module | None]) -> ast.Module | None:
-    """Parse *file* and cache the result."""
-    if file not in cache:
-        try:
-            source = file.read_text(encoding="utf-8")
-            cache[file] = ast.parse(source, filename=str(file))
-        except (SyntaxError, UnicodeDecodeError, OSError):
-            cache[file] = None
-    return cache[file]
+def _parse_file(file: Path) -> ast.Module | None:
+    """Parse *file* and return the AST, or ``None`` on failure."""
+    try:
+        source = file.read_text(encoding="utf-8")
+        return ast.parse(source, filename=str(file))
+    except (SyntaxError, UnicodeDecodeError, OSError):
+        return None
 
 
-def _find_function_node(
+def _extract_handlers(
     tree: ast.Module,
-    name: str,
-    lineno: int,
-) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
-    """Find a top-level function node by *name* and *lineno*."""
-    for node in ast.iter_child_nodes(tree):
-        if (
-            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-            and node.name == name
-            and node.lineno == lineno
-        ):
-            return node
-    return None
+    patterns: tuple[str, ...],
+) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Return top-level function nodes whose name matches *patterns*."""
+    # Only inspect top-level nodes (iter_child_nodes does not recurse)
+    # so that nested functions and class methods are excluded.
+    return [
+        node
+        for node in ast.iter_child_nodes(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(fnmatch(node.name, p) for p in patterns)
+    ]
 
 
 def _check_function(

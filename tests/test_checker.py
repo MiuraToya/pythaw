@@ -606,6 +606,77 @@ class TestCallChainResolution:
             violations = check(tmp_path, Config())
         assert violations == []
 
+    def test_class_staticmethod_is_followed(self, tmp_path: Path) -> None:
+        """A static/class method call in the same file is followed."""
+        source = (
+            "import boto3\n"
+            "\n"
+            "class AwsProvider:\n"
+            "    @staticmethod\n"
+            "    def get_client():\n"
+            '        return boto3.client("s3")\n'
+            "\n"
+            "def handler(event, context):\n"
+            "    AwsProvider.get_client()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        v = violations[0]
+        assert v.code == "PW001"
+        assert len(v.call_chain) == 1
+        assert v.call_chain[0].name == "AwsProvider.get_client()"
+
+    def test_imported_class_method_is_followed(self, tmp_path: Path) -> None:
+        """A class method imported from another file is followed."""
+        _make_files(
+            tmp_path,
+            {
+                "infra.py": (
+                    "import boto3\n"
+                    "\n"
+                    "class AwsProvider:\n"
+                    "    @staticmethod\n"
+                    "    def get_client():\n"
+                    '        return boto3.client("s3")\n'
+                ),
+                "app.py": (
+                    "from infra import AwsProvider\n"
+                    "\n"
+                    "def handler(event, context):\n"
+                    "    AwsProvider.get_client()\n"
+                ),
+            },
+        )
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        v = violations[0]
+        assert v.code == "PW001"
+        assert "infra.py" in v.file
+        assert len(v.call_chain) == 1
+        assert v.call_chain[0].name == "AwsProvider.get_client()"
+
+    def test_class_method_chain_display_name(self, tmp_path: Path) -> None:
+        """The call_chain name for a class method uses 'Class.method()' format."""
+        source = (
+            "import boto3\n"
+            "\n"
+            "class Provider:\n"
+            "    @staticmethod\n"
+            "    def build():\n"
+            '        return boto3.client("s3")\n'
+            "\n"
+            "def handler(event, context):\n"
+            "    Provider.build()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        assert violations[0].call_chain[0].name == "Provider.build()"
+
 
 class TestCheckEdgeCases:
     """Verify edge cases for the checker."""

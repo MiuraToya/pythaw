@@ -1,51 +1,51 @@
 # CLAUDE.md
 
-## プロジェクト概要
+## Project Overview
 
-pythaw は、AWS Lambda の Python ハンドラー内にある重い初期化処理を検出する静的解析 CLI ツール。
-詳細な仕様は [docs/spec.md](docs/spec.md)、アーキテクチャは [docs/adr/0001-architecture.md](docs/adr/0001-architecture.md) を参照。
+pythaw is a static analysis CLI tool that detects heavy initialization inside AWS Lambda Python handlers.
+See [docs/spec.md](docs/spec.md) for the specification and [docs/adr/0001-architecture.md](docs/adr/0001-architecture.md) for architecture decisions.
 
-## 期待する役割
-- 静的解析ツールのスペシャリストとして、ASTのベストプラクティスや一般的なアプローチを用いて設計・実装をサポートする。
+## Expected Role
+- Act as a static analysis specialist, supporting design and implementation using AST best practices and common approaches.
 
-## 開発コマンド
+## Development Commands
 
 ```bash
-# 依存関係のインストール
+# Install dependencies
 uv sync
 
-# CLI実行
+# Run CLI
 uv run pythaw check <path>
 
-# テスト実行
+# Run tests
 uv run pytest
 
-# リント
+# Lint
 uv run ruff check .
 
-# 型チェック
+# Type check
 uv run mypy pythaw
 ```
 
-## コミットメッセージ規約
+## Commit Message Convention
 
 ```
 <type>: <subject>
 ```
 
 **type:**
-- `feat:` 新機能
-- `fix:` バグ修正
-- `docs:` ドキュメント変更
-- `refactor:` リファクタリング
-- `test:` テスト追加・修正
-- `chore:` その他（CI/CD, 依存関係、設定ファイル等）
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation change
+- `refactor:` Refactoring
+- `test:` Add or update tests
+- `chore:` Other (CI/CD, dependencies, config, etc.)
 
-**subject:** 50文字以内、文末ピリオドなし
+**subject:** Max 50 characters, no trailing period
 
-## ブランチ戦略
+## Branch Strategy
 
-- `main` ブランチには直接コミットしない
-- 作業時は必ず feature ブランチを切って対応する
-  - 命名規則: `<type>/<短い説明>` (例: `feat/add-analyzer`, `fix/ci-test-failure`)
-- 作業完了後は PR を作成し、レビュー後に `main` へマージする
+- Never commit directly to `main`
+- Always create a feature branch for work
+  - Naming: `<type>/<short-description>` (e.g., `feat/add-analyzer`, `fix/ci-test-failure`)
+- Create a PR after work is done and merge to `main` after review

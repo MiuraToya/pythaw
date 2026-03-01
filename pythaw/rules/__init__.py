@@ -22,9 +22,11 @@ def _collect_rules() -> tuple[Rule, ...]:
         if info.name.startswith("_"):
             continue
         mod = importlib.import_module(f"{__name__}.{info.name}")
-        for obj in vars(mod).values():
-            if isinstance(obj, type) and issubclass(obj, Rule) and obj is not Rule:
-                rules.append(obj())
+        rules.extend(
+            obj()
+            for obj in vars(mod).values()
+            if isinstance(obj, type) and issubclass(obj, Rule) and obj is not Rule
+        )
     rules.sort(key=lambda r: r.code)
     return tuple(rules)
 

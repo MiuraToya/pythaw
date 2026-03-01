@@ -417,11 +417,7 @@ class TestPerFileIgnores:
 
     def test_no_effect_on_non_matching_file(self, tmp_path: Path) -> None:
         """Files that do not match the glob pattern are checked normally."""
-        source = (
-            "import boto3\n"
-            "def handler(event, context):\n"
-            '    boto3.client("s3")\n'
-        )
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
         _make_files(tmp_path, {"src/app.py": source})
         cfg = Config(per_file_ignores=(("tests/*", ("PW001",)),))
         with patch("pythaw.finder._git_ls_files", return_value=None):
@@ -450,11 +446,7 @@ class TestPerFileIgnores:
 
     def test_empty_per_file_ignores(self, tmp_path: Path) -> None:
         """Empty per_file_ignores has no effect."""
-        source = (
-            "import boto3\n"
-            "def handler(event, context):\n"
-            '    boto3.client("s3")\n'
-        )
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
         _make_files(tmp_path, {"app.py": source})
         cfg = Config(per_file_ignores=())
         with patch("pythaw.finder._git_ls_files", return_value=None):
@@ -492,10 +484,7 @@ class TestCallChainResolution:
             tmp_path,
             {
                 "infra.py": (
-                    "import boto3\n"
-                    "\n"
-                    "def get_client():\n"
-                    '    return boto3.client("s3")\n'
+                    'import boto3\n\ndef get_client():\n    return boto3.client("s3")\n'
                 ),
                 "app.py": (
                     "from infra import get_client\n"
@@ -520,10 +509,7 @@ class TestCallChainResolution:
             tmp_path,
             {
                 "infra.py": (
-                    "import boto3\n"
-                    "\n"
-                    "def get_client():\n"
-                    '    return boto3.client("s3")\n'
+                    'import boto3\n\ndef get_client():\n    return boto3.client("s3")\n'
                 ),
                 "app.py": (
                     "import infra\n"
@@ -614,11 +600,7 @@ class TestCallChainResolution:
 
     def test_unresolvable_call_is_skipped(self, tmp_path: Path) -> None:
         """Calls to stdlib/third-party functions are silently skipped."""
-        source = (
-            "import json\n"
-            "def handler(event, context):\n"
-            "    json.loads('{}')\n"
-        )
+        source = "import json\ndef handler(event, context):\n    json.loads('{}')\n"
         _make_files(tmp_path, {"app.py": source})
         with patch("pythaw.finder._git_ls_files", return_value=None):
             violations = check(tmp_path, Config())

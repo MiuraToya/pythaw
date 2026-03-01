@@ -24,9 +24,7 @@ class ConciseFormatter(Formatter):
 
         lines: list[str] = []
         for v in violations:
-            lines.append(
-                f"{v.file}:{v.line}:{v.col}: {v.code} {v.message}"
-            )
+            lines.append(f"{v.file}:{v.line}:{v.col}: {v.code} {v.message}")
             if v.call_chain:
                 first = v.call_chain[0]
                 parts = [f"{first.file}:{first.line}:{first.col}"]

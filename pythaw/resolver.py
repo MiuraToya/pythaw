@@ -66,9 +66,7 @@ class Resolver:
         if isinstance(node.func, ast.Attribute) and isinstance(
             node.func.value, ast.Name
         ):
-            return self._resolve_attr_call(
-                file, node.func.value.id, node.func.attr
-            )
+            return self._resolve_attr_call(file, node.func.value.id, node.func.attr)
         return None
 
     @staticmethod
@@ -126,17 +124,16 @@ class Resolver:
                 return (target, defn)
         return None
 
-    def _find_def(
-        self, file: Path, name: str
-    ) -> DefinitionNode | None:
+    def _find_def(self, file: Path, name: str) -> DefinitionNode | None:
         """Find a top-level function or class definition by *name*."""
         tree = self.parse_file(file)
         if tree is None:
             return None
         for node in ast.iter_child_nodes(tree):
-            if isinstance(
-                node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-            ) and node.name == name:
+            if (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                and node.name == name
+            ):
                 return node
         return None
 
@@ -195,9 +192,7 @@ class Resolver:
             local_name = alias.asname or alias.name
             result[local_name] = (str(resolved), alias.name)
 
-    def _resolve_module(
-        self, module_name: str, from_file: Path
-    ) -> Path | None:
+    def _resolve_module(self, module_name: str, from_file: Path) -> Path | None:
         """Resolve a dotted module name to a local ``.py`` file."""
         parts = module_name.split(".")
         search_dirs = [from_file.resolve().parent, self._base]

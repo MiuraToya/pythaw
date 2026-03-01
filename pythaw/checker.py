@@ -58,7 +58,11 @@ def check(
         for func_node in _extract_handlers(tree, config.handler_patterns):
             violations.extend(
                 _check_function(
-                    file, func_node, file_rules, suppressed, resolver,
+                    file,
+                    func_node,
+                    file_rules,
+                    suppressed,
+                    resolver,
                 )
             )
 
@@ -199,7 +203,13 @@ def _check_function(  # noqa: PLR0913
 
         # Follow resolved local calls
         _follow_call(
-            file, node, rules, resolver, chain, visited, violations,
+            file,
+            node,
+            rules,
+            resolver,
+            chain,
+            visited,
+            violations,
         )
 
     return violations
@@ -240,9 +250,7 @@ def _follow_call(  # noqa: PLR0913
         name=resolver.call_display_name(node),
     )
     target_source = resolver.read_source(target_file)
-    target_suppressed = (
-        _parse_nopw_comments(target_source) if target_source else {}
-    )
+    target_suppressed = _parse_nopw_comments(target_source) if target_source else {}
     violations.extend(
         _check_function(
             target_file,

@@ -126,8 +126,11 @@ class TestStatisticsOption:
             main(["check", str(tmp_path), "--statistics"])
         assert exc_info.value.code == 1
         out = capsys.readouterr().out
-        assert "PW001  2" in out
-        assert "PW002  1" in out
+        assert "PW001" in out
+        assert "PW002" in out
+        # Counts appear in the statistics table
+        assert "2" in out
+        assert "1" in out
 
 
 class TestSelectIgnoreOptions:

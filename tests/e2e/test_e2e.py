@@ -42,11 +42,11 @@ class TestCheckE2E:
         assert result.stdout.startswith("app.py:")
 
     def test_clean_code_exits_0(self, tmp_path: Path) -> None:
-        """No violations produce no output and exit code 0."""
+        """No violations produce a success message and exit code 0."""
         cwd = _use_fixture("clean", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 0
-        assert result.stdout == ""
+        assert result.stdout == "All checks passed!\n"
 
     def test_multiple_violations_across_files(self, tmp_path: Path) -> None:
         """Multiple violations across files are all reported."""

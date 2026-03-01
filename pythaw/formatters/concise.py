@@ -9,7 +9,14 @@ if TYPE_CHECKING:
 
 
 class ConciseFormatter(Formatter):
-    """Format violations as one-line-per-violation with a summary."""
+    """Format violations as one-line-per-violation with a summary.
+
+    Output format::
+
+        file:line:col: CODE message
+
+        Found N violation(s) in M file(s).
+    """
 
     def format(self, violations: list[Violation]) -> str:
         if not violations:

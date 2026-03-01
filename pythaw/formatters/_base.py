@@ -8,8 +8,18 @@ if TYPE_CHECKING:
 
 
 class Formatter(ABC):
-    """Base class for all output formatters."""
+    """Base class for all output formatters.
+
+    Subclasses must implement the ``format`` method.
+    """
 
     @abstractmethod
     def format(self, violations: list[Violation]) -> str:
-        """Format violations into an output string."""
+        """Format violations into an output string.
+
+        Args:
+            violations: List of violations to format.
+
+        Returns:
+            A formatted string ready for printing.
+        """

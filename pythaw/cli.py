@@ -15,7 +15,15 @@ if TYPE_CHECKING:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    """CLI entry point."""
+    """CLI entry point.
+
+    Args:
+        argv: Command-line arguments. Defaults to ``sys.argv[1:]``.
+
+    Raises:
+        SystemExit: Always raised with the appropriate exit code
+            (0 = no issues, 1 = violations found, 2 = tool error).
+    """
     parser = _build_parser()
     args = parser.parse_args(argv)
 
@@ -57,6 +65,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     violations = check(args.path, config)
 
     if not violations:
+        print("All checks passed!")
         return 0
 
     formatter = get_formatter("concise")

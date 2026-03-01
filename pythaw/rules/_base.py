@@ -8,7 +8,11 @@ if TYPE_CHECKING:
 
 
 class Rule(ABC):
-    """Base class for all pythaw rules."""
+    """Base class for all pythaw rules.
+
+    Subclasses must implement all abstract properties (``code``, ``message``,
+    ``what``, ``why``, ``example``) and the ``check`` method.
+    """
 
     @property
     @abstractmethod
@@ -32,4 +36,11 @@ class Rule(ABC):
 
     @abstractmethod
     def check(self, node: ast.Call) -> bool:
-        """Return True if the given Call node violates this rule."""
+        """Return True if the given Call node violates this rule.
+
+        Args:
+            node: An ``ast.Call`` node to inspect.
+
+        Returns:
+            True if the node matches this rule's violation pattern.
+        """

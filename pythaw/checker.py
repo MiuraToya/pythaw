@@ -19,7 +19,15 @@ FunctionNode: TypeAlias = ast.FunctionDef | ast.AsyncFunctionDef
 
 
 def check(path: Path, config: Config) -> list[Violation]:
-    """Run all rules against handler functions found under *path*."""
+    """Run all rules against handler functions found under *path*.
+
+    Args:
+        path: File or directory to check.
+        config: Project configuration (handler patterns, excludes, etc.).
+
+    Returns:
+        A list of violations found across all handler functions.
+    """
     files = find_files(path, config)
     rules = get_all_rules()
     violations: list[Violation] = []

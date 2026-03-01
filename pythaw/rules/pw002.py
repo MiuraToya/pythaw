@@ -37,6 +37,7 @@ class Boto3ResourceRule(Rule):
     )
 
     def check(self, node: ast.Call) -> bool:
+        """Return True if *node* is a ``boto3.resource(...)`` call."""
         return (
             isinstance(node.func, ast.Attribute)
             and isinstance(node.func.value, ast.Name)

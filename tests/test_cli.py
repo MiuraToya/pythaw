@@ -73,6 +73,62 @@ class TestCheckSubcommand:
         assert capsys.readouterr().err != ""
 
 
+class TestExitZeroOption:
+    """Verify --exit-zero CLI option."""
+
+    def test_exit_zero_with_violations(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--exit-zero returns 0 even when violations exist."""
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--exit-zero"])
+        assert exc_info.value.code == 0
+        out = capsys.readouterr().out
+        assert "PW001" in out
+
+    def test_exit_zero_without_violations(self, tmp_path: Path) -> None:
+        """--exit-zero still returns 0 when no violations."""
+        source = "def handler(event, context):\n    return 200\n"
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--exit-zero"])
+        assert exc_info.value.code == 0
+
+
+class TestStatisticsOption:
+    """Verify --statistics CLI option."""
+
+    def test_statistics_output(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--statistics appends per-rule violation counts."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+            '    boto3.client("dynamodb")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(["check", str(tmp_path), "--statistics"])
+        assert exc_info.value.code == 1
+        out = capsys.readouterr().out
+        assert "PW001  2" in out
+        assert "PW002  1" in out
+
+
 class TestRulesSubcommand:
     """Verify the 'rules' subcommand behaviour."""
 

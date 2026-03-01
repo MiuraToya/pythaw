@@ -2,7 +2,7 @@
 
 - [x] rules/pw004-pw009 — 追加ルール
 - [ ] cli.py — --select / --ignore
-- [ ] cli.py — --exit-zero / --statistics
+- [x] cli.py — --exit-zero / --statistics
 - [ ] formatters/json, github, sarif — 追加フォーマッター + --format
 - [ ] checker.py — インライン抑制 / ファイルレベル抑制
 - [ ] config.py + checker.py — per-file-ignores

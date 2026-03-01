@@ -1,48 +1,23 @@
 from __future__ import annotations
 
-import ast
 import subprocess
-from dataclasses import dataclass
 from fnmatch import fnmatch
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pythaw.config import Config
 
 
-@dataclass(frozen=True)
-class HandlerFunction:
-    """A handler entry point discovered in a source file."""
-
-    file: Path
-    name: str
-    lineno: int
-    col_offset: int
-
-
-def find_handlers(path: Path, config: Config) -> list[HandlerFunction]:
-    """Find handler entry points in Python files under *path*.
-
-    Collects ``*.py`` files, parses each one, and returns top-level
-    function definitions whose name matches any of the configured
-    ``handler_patterns``.
-    """
-    files = collect_files(path, config)
-    handlers: list[HandlerFunction] = []
-    for file in files:
-        handlers.extend(_extract_handlers(file, config.handler_patterns))
-    return handlers
-
-
-def collect_files(path: Path, config: Config) -> list[Path]:
+def find_files(path: Path, config: Config) -> list[Path]:
     """Collect Python files to check under *path*.
 
     When *path* is a regular file it is returned directly (no filtering).
     When *path* is a directory, ``*.py`` files are discovered recursively,
     respecting ``.gitignore`` and the ``exclude`` patterns in *config*.
     """
-    target = Path(path).resolve()
+    target = path.resolve()
 
     if target.is_file():
         return [target]
@@ -50,6 +25,8 @@ def collect_files(path: Path, config: Config) -> list[Path]:
     if not target.is_dir():
         return []
 
+    # Prefer git for file discovery (.gitignore-aware); fall back to
+    # plain glob when git is unavailable or the directory is not a repo.
     py_files = _git_ls_files(target)
     if py_files is None:
         py_files = _rglob_py(target)
@@ -66,36 +43,16 @@ def collect_files(path: Path, config: Config) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 
-def _extract_handlers(
-    file: Path,
-    patterns: tuple[str, ...],
-) -> list[HandlerFunction]:
-    """Parse *file* and return top-level functions matching *patterns*."""
-    try:
-        source = file.read_text(encoding="utf-8")
-        tree = ast.parse(source, filename=str(file))
-    except (SyntaxError, UnicodeDecodeError, OSError):
-        return []
-
-    return [
-        HandlerFunction(
-            file=file,
-            name=node.name,
-            lineno=node.lineno,
-            col_offset=node.col_offset,
-        )
-        for node in ast.iter_child_nodes(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and any(fnmatch(node.name, p) for p in patterns)
-    ]
-
-
 def _git_ls_files(directory: Path) -> list[Path] | None:
     """List Python files using *git*, respecting ``.gitignore``.
 
     Returns ``None`` when *git* is unavailable or *directory* is not inside a
     git repository so the caller can fall back to a plain glob.
     """
+    # --cached: tracked files, --others: untracked files.
+    # Together they cover all files except .gitignore'd ones
+    # (filtered by --exclude-standard).
+    # -z: null-delimited output for safe parsing of filenames with spaces.
     cmd = [
         "git",
         "ls-files",
@@ -114,7 +71,9 @@ def _git_ls_files(directory: Path) -> list[Path] | None:
             timeout=10,
             check=False,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired):
+        # OSError covers git not installed, permission denied, etc.
+        # TimeoutExpired: git hung (e.g. prompting for credentials).
         return None
 
     if result.returncode != 0:
@@ -122,8 +81,13 @@ def _git_ls_files(directory: Path) -> list[Path] | None:
 
     paths: list[Path] = []
     for name in result.stdout.split("\0"):
+        # -z output ends with a trailing \0, producing an empty string
+        # at the end of split(); skip it.
         if name:
+            # git ls-files returns paths relative to cwd; convert to absolute.
             resolved = (directory / name).resolve()
+            # --cached includes files still in the index after deletion;
+            # verify the file actually exists on disk.
             if resolved.is_file():
                 paths.append(resolved)
     return paths
@@ -136,7 +100,7 @@ def _rglob_py(directory: Path) -> list[Path]:
 
 def _is_excluded(
     file: Path,
-    base: Path,
+    directory: Path,
     exclude: tuple[str, ...],
 ) -> bool:
     """Return ``True`` if *file* matches any *exclude* pattern.
@@ -147,15 +111,14 @@ def _is_excluded(
     ``"tests/*.py"``.
     """
     try:
-        relative = file.relative_to(base)
+        relative = file.relative_to(directory)
     except ValueError:
         return False
 
-    rel_str = str(relative)
     for pattern in exclude:
         for part in relative.parts:
             if fnmatch(part, pattern):
                 return True
-        if fnmatch(rel_str, pattern):
+        if fnmatch(str(relative), pattern):
             return True
     return False

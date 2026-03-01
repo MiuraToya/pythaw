@@ -73,6 +73,66 @@ class TestCheckSubcommand:
         assert capsys.readouterr().err != ""
 
 
+class TestSelectIgnoreOptions:
+    """Verify --select and --ignore CLI options."""
+
+    def test_select_filters_output(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--select limits violations to specified rules."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(
+                [
+                    "check",
+                    str(tmp_path),
+                    "--select",
+                    "PW002",
+                ]
+            )
+        assert exc_info.value.code == 1
+        out = capsys.readouterr().out
+        assert "PW002" in out
+        assert "PW001" not in out
+
+    def test_ignore_excludes_output(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--ignore suppresses specified rules."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with (
+            patch("pythaw.finder._git_ls_files", return_value=None),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main(
+                [
+                    "check",
+                    str(tmp_path),
+                    "--ignore",
+                    "PW001",
+                ]
+            )
+        assert exc_info.value.code == 1
+        out = capsys.readouterr().out
+        assert "PW002" in out
+        assert "PW001" not in out
+
+
 class TestRulesSubcommand:
     """Verify the 'rules' subcommand behaviour."""
 

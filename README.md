@@ -135,6 +135,10 @@ exclude = [".venv", "tests"]
 "scripts/*" = ["PW001"]
 ```
 
+## License
+
+[MIT](LICENSE)
+
 ## Development
 
 ```bash

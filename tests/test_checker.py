@@ -207,6 +207,72 @@ class TestCheckPositionInfo:
         assert v.col == 13
 
 
+class TestSelectIgnoreFiltering:
+    """Verify select/ignore rule filtering in check()."""
+
+    def test_select_filters_rules(self, tmp_path: Path) -> None:
+        """Only rules in the select set are applied."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config(), select=frozenset({"PW001"}))
+        assert len(violations) == 1
+        assert violations[0].code == "PW001"
+
+    def test_ignore_excludes_rules(self, tmp_path: Path) -> None:
+        """Rules in the ignore set are excluded."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config(), ignore=frozenset({"PW001"}))
+        codes = [v.code for v in violations]
+        assert "PW001" not in codes
+        assert "PW002" in codes
+
+    def test_select_and_ignore_combined(self, tmp_path: Path) -> None:
+        """Select narrows first, then ignore removes from that set."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+            "    boto3.Session()\n"
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(
+                tmp_path,
+                Config(),
+                select=frozenset({"PW001", "PW002"}),
+                ignore=frozenset({"PW002"}),
+            )
+        assert len(violations) == 1
+        assert violations[0].code == "PW001"
+
+    def test_empty_select_runs_all_rules(self, tmp_path: Path) -> None:
+        """Empty select set means all rules are active (default behaviour)."""
+        source = (
+            "import boto3\n"
+            "def handler(event, context):\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": source})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config(), select=frozenset())
+        assert len(violations) == 2
+
+
 class TestCheckEdgeCases:
     """Verify edge cases for the checker."""
 

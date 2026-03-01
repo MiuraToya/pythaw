@@ -60,6 +60,16 @@ def _build_parser() -> argparse.ArgumentParser:
         default="concise",
         help="Output format (default: concise)",
     )
+    check_p.add_argument(
+        "--select",
+        default=None,
+        help="Comma-separated list of rule codes to enable (e.g. PW001,PW002)",
+    )
+    check_p.add_argument(
+        "--ignore",
+        default=None,
+        help="Comma-separated list of rule codes to disable (e.g. PW003)",
+    )
     check_p.set_defaults(func=_cmd_check)
 
     rules_p = sub.add_parser("rules", help="List all built-in rules")
@@ -72,6 +82,13 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _parse_code_list(value: str | None) -> frozenset[str]:
+    """Parse a comma-separated rule code list into a frozenset."""
+    if value is None:
+        return frozenset()
+    return frozenset(c.strip() for c in value.split(",") if c.strip())
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     try:
         config = Config.load()
@@ -79,7 +96,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    violations = check(args.path, config)
+    select = _parse_code_list(args.select)
+    ignore = _parse_code_list(args.ignore)
+    violations = check(args.path, config, select=select, ignore=ignore)
 
     if not violations:
         print("All checks passed!")

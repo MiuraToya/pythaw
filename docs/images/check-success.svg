@@ -44,6 +44,9 @@
     <clipPath id="terminal-1930648399-line-0">
     <rect x="0" y="1.5" width="976" height="24.65"/>
             </clipPath>
+<clipPath id="terminal-1930648399-line-1">
+    <rect x="0" y="25.9" width="976" height="24.65"/>
+            </clipPath>
     </defs>
 
     <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="992" height="96.8" rx="8"/><text class="terminal-1930648399-title" fill="#c5c8c6" text-anchor="middle" x="496" y="27">pythaw&#160;check</text>
@@ -56,9 +59,7 @@
     <g transform="translate(9, 41)" clip-path="url(#terminal-1930648399-clip-terminal)">
     
     <g class="terminal-1930648399-matrix">
-    <text class="terminal-1930648399-r1" x="0" y="20" textLength="24.4" clip-path="url(#terminal-1930648399-line-0)">$&#160;</text><text class="terminal-1930648399-r2" x="24.4" y="20" textLength="280.6" clip-path="url(#terminal-1930648399-line-0)">pythaw&#160;check&#160;handler.py</text><text class="terminal-1930648399-r2" x="976" y="20" textLength="12.2" clip-path="url(#terminal-1930648399-line-0)">
-</text><text class="terminal-1930648399-r3" x="0" y="44.4" textLength="219.6" clip-path="url(#terminal-1930648399-line-1)">All&#160;checks&#160;passed!</text><text class="terminal-1930648399-r2" x="976" y="44.4" textLength="12.2" clip-path="url(#terminal-1930648399-line-1)">
-</text>
+    <text class="terminal-1930648399-r1" x="0" y="20" clip-path="url(#terminal-1930648399-line-0)">$&#160;</text><text class="terminal-1930648399-r2" x="24.4" y="20" clip-path="url(#terminal-1930648399-line-0)">pythaw&#160;check&#160;handler.py</text><text class="terminal-1930648399-r3" x="0" y="44.4" clip-path="url(#terminal-1930648399-line-1)">All&#160;checks&#160;passed!</text>
     </g>
     </g>
 </svg>

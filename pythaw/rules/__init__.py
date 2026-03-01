@@ -1,36 +1,44 @@
 from __future__ import annotations
 
+import importlib
+import pkgutil
+
 from pythaw.rules._base import Rule
-from pythaw.rules.pw001 import Boto3ClientRule
-from pythaw.rules.pw002 import Boto3ResourceRule
-from pythaw.rules.pw003 import Boto3SessionRule
-from pythaw.rules.pw004 import PymysqlConnectRule
-from pythaw.rules.pw005 import Psycopg2ConnectRule
-from pythaw.rules.pw006 import RedisRule
-from pythaw.rules.pw007 import RedisStrictRule
-from pythaw.rules.pw008 import HttpxClientRule
-from pythaw.rules.pw009 import RequestsSessionRule
 
 __all__ = ["Rule", "get_all_rules", "get_rule"]
 
-_RULES: tuple[Rule, ...] = (
-    Boto3ClientRule(),
-    Boto3ResourceRule(),
-    Boto3SessionRule(),
-    PymysqlConnectRule(),
-    Psycopg2ConnectRule(),
-    RedisRule(),
-    RedisStrictRule(),
-    HttpxClientRule(),
-    RequestsSessionRule(),
-)
+
+def _collect_rules() -> tuple[Rule, ...]:
+    """Discover and instantiate all Rule subclasses in this package.
+
+    Scans all modules under ``pythaw/rules/`` (excluding ``_``-prefixed
+    modules like ``_base``), imports each one, and collects every
+    ``Rule`` subclass found.  The resulting instances are sorted by
+    their ``code`` attribute (e.g. ``"PW001"``, ``"PW002"``, …) so
+    that ordering is deterministic.
+    """
+    rules: list[Rule] = []
+    for info in pkgutil.iter_modules(__path__):
+        if info.name.startswith("_"):
+            continue
+        mod = importlib.import_module(f"{__name__}.{info.name}")
+        for obj in vars(mod).values():
+            if isinstance(obj, type) and issubclass(obj, Rule) and obj is not Rule:
+                rules.append(obj())
+    rules.sort(key=lambda r: r.code)
+    return tuple(rules)
+
+
+_RULES = _collect_rules()
 
 
 def get_all_rules() -> tuple[Rule, ...]:
+    """Return all built-in rules."""
     return _RULES
 
 
 def get_rule(code: str) -> Rule | None:
+    """Return the rule matching *code*, or ``None`` if not found."""
     for rule in _RULES:
         if rule.code == code:
             return rule

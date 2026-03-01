@@ -138,13 +138,3 @@ exclude = [".venv", "tests"]
 ## License
 
 [MIT](LICENSE)
-
-## Development
-
-```bash
-uv sync                # Install dependencies
-uv run pytest          # Run tests
-uv run ruff check .    # Lint
-uv run ruff format .   # Format
-uv run mypy pythaw     # Type check
-```

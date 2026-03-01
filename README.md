@@ -1,5 +1,7 @@
 # pythaw
 
+[日本語ドキュメント](README.ja.md)
+
 A Python static analysis tool that detects heavy initialization and connection-establishing resource creation inside AWS Lambda handlers.
 
 It recursively follows function calls from handler functions—including across imported files—to catch indirect violations.

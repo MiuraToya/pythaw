@@ -54,6 +54,12 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show per-rule violation counts",
     )
+    check_p.add_argument(
+        "--format",
+        choices=["concise", "json", "github", "sarif"],
+        default="concise",
+        help="Output format (default: concise)",
+    )
     check_p.set_defaults(func=_cmd_check)
 
     rules_p = sub.add_parser("rules", help="List all built-in rules")
@@ -79,7 +85,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         print("All checks passed!")
         return 0
 
-    formatter = get_formatter("concise")
+    formatter = get_formatter(args.format)
     if formatter is not None:  # pragma: no branch — always exists
         print(formatter.format(violations))
 

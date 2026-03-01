@@ -83,10 +83,15 @@ class Resolver:
     @staticmethod
     def get_init(cls_node: ast.ClassDef) -> FunctionNode | None:
         """Return the ``__init__`` method of *cls_node*, or ``None``."""
+        return Resolver.get_method(cls_node, "__init__")
+
+    @staticmethod
+    def get_method(cls_node: ast.ClassDef, name: str) -> FunctionNode | None:
+        """Return the method named *name* from *cls_node*, or ``None``."""
         for item in cls_node.body:
             if (
                 isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
-                and item.name == "__init__"
+                and item.name == name
             ):
                 return item
         return None
@@ -114,7 +119,7 @@ class Resolver:
     def _resolve_attr_call(
         self, file: Path, obj_name: str, attr: str
     ) -> tuple[Path, DefinitionNode] | None:
-        """Resolve ``obj_name.attr()`` -- module attribute access."""
+        """Resolve ``obj_name.attr()`` -- module or class attribute access."""
         imports = self._get_imports(file)
         if obj_name in imports:
             target_path, _ = imports[obj_name]
@@ -122,6 +127,35 @@ class Resolver:
             defn = self._find_def(target, attr)
             if defn is not None:
                 return (target, defn)
+
+        # Fallback: obj_name may be a class (same file or imported).
+        method = self._resolve_class_method(file, obj_name, attr)
+        if method is not None:
+            return method
+        return None
+
+    def _resolve_class_method(
+        self, file: Path, class_name: str, method_name: str
+    ) -> tuple[Path, FunctionNode] | None:
+        """Try to resolve ``ClassName.method()`` to a method definition."""
+        # 1. Same-file class
+        cls = self._find_class(file, class_name)
+        if cls is not None:
+            method = self.get_method(cls, method_name)
+            if method is not None:
+                return (file.resolve(), method)
+
+        # 2. Imported class
+        imports = self._get_imports(file)
+        if class_name in imports:
+            target_path, original_name = imports[class_name]
+            target = Path(target_path)
+            lookup_name = original_name or class_name
+            cls = self._find_class(target, lookup_name)
+            if cls is not None:
+                method = self.get_method(cls, method_name)
+                if method is not None:
+                    return (target, method)
         return None
 
     def _find_def(self, file: Path, name: str) -> DefinitionNode | None:
@@ -134,6 +168,16 @@ class Resolver:
                 isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
                 and node.name == name
             ):
+                return node
+        return None
+
+    def _find_class(self, file: Path, name: str) -> ast.ClassDef | None:
+        """Find a top-level class definition by *name*."""
+        tree = self.parse_file(file)
+        if tree is None:
+            return None
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, ast.ClassDef) and node.name == name:
                 return node
         return None
 

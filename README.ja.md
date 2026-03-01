@@ -30,7 +30,14 @@ def lambda_handler(event, context):
     return client.get_object(Bucket="my-bucket", Key=event["key"])
 ```
 
-<img src="docs/images/check-violation.svg" alt="pythaw check — 違反検出" width="720">
+```
+$ pythaw check handler.py
+infra/aws.py:7:15: PW001 boto3.client() should be called at module scope
+  → handler.py:5:11 process()
+    → service.py:5:13 S3Provider.get_client()
+
+Found 1 violation in 1 file.
+```
 
 モジュールスコープに移動することで、Lambda のコンテナ再利用時に初期化をスキップできる。
 
@@ -43,7 +50,10 @@ def lambda_handler(event, context):
     return client.get_object(Bucket="my-bucket", Key=event["key"])
 ```
 
-<img src="docs/images/check-success.svg" alt="pythaw check — チェック通過" width="720">
+```
+$ pythaw check handler.py
+All checks passed!
+```
 
 ## Usage
 

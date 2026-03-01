@@ -1,36 +1,44 @@
 # pythaw
 
-AWS Lambda handler 内の重い初期化処理やコネクションを伴うリソース生成を検出する Python 静的解析ツール。
+[日本語ドキュメント](README.ja.md)
+
+A Python static analysis tool that detects heavy initialization and connection-establishing resource creation inside AWS Lambda handlers.
+
+It recursively follows function calls from handler functions—including across imported files—to catch indirect violations.
+
+## Requirements
+
+Python 3.10 - 3.14 — matching the actively supported AWS Lambda Python runtimes.
 
 ## Install
 
 ```bash
+# pip
 pip install pythaw
+
+# uv
+uv add pythaw
 ```
 
-## Example
+## Quick Start
 
 ```python
 # handler.py
 
 def lambda_handler(event, context):
-    # NG: handler 内で boto3 クライアントを生成すると
-    #     毎回初期化が走り、ウォームスタートの恩恵を受けられない
+    # BAD: Creating a boto3 client inside the handler
+    #      runs initialization on every invocation,
+    #      losing the benefit of warm starts.
     client = boto3.client("s3")
     return client.get_object(Bucket="my-bucket", Key=event["key"])
 ```
 
-```bash
-$ pythaw check handler.py
-handler.py:6:14: PW001 boto3.client() should be called at module scope
+<img src="docs/images/check-violation.svg" alt="pythaw check — violation detected" width="720">
 
-Found 1 violation in 1 file.
-```
-
-モジュールスコープに移動することで、Lambda のコンテナ再利用時に初期化をスキップできます。
+Move the client to module scope so Lambda container reuse skips the initialization:
 
 ```python
-# handler.py (修正後)
+# handler.py (fixed)
 
 client = boto3.client("s3")
 
@@ -38,9 +46,34 @@ def lambda_handler(event, context):
     return client.get_object(Bucket="my-bucket", Key=event["key"])
 ```
 
+<img src="docs/images/check-success.svg" alt="pythaw check — all checks passed" width="720">
+
+## Usage
+
+```bash
+pythaw check <path>                    # Check a file or directory
+pythaw check . --format json           # JSON output
+pythaw check . --format github         # GitHub Actions annotation format
+pythaw check . --format sarif          # SARIF format (Code Scanning integration)
+pythaw check . --select PW001,PW002    # Enable only specific rules
+pythaw check . --ignore PW003          # Disable specific rules
+pythaw check . --exit-zero             # Always exit with code 0
+pythaw check . --statistics            # Show per-rule violation counts
+pythaw rules                           # List built-in rules
+pythaw rule PW001                      # Show rule details
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | No violations found |
+| 1 | Violations found |
+| 2 | Tool error (invalid config, etc.) |
+
 ## Rules
 
-| ID    | 検出対象 |
+| ID    | Detects |
 |-------|---------|
 | PW001 | `boto3.client()` |
 | PW002 | `boto3.resource()` |
@@ -51,3 +84,70 @@ def lambda_handler(event, context):
 | PW007 | `redis.StrictRedis()` |
 | PW008 | `httpx.Client()` |
 | PW009 | `requests.Session()` |
+
+## Call Graph Traversal
+
+pythaw recursively follows local function calls and imported modules from the handler, detecting indirect violations across files.
+
+### Supported patterns
+
+| Pattern | Example |
+|---------|---------|
+| Same-file function call | `helper()` |
+| Module-qualified function call | `infra.get_client()` |
+| Class method call | `AwsProvider.get_client()` |
+| Class instantiation (`__init__`) | `S3Client()` |
+| Cross-file import tracking | `from infra import get_client` |
+
+> **Note:** Instance method calls via variables (e.g. `obj = Cls(); obj.method()`) are not tracked — this would require data-flow analysis beyond the current scope.
+
+```
+infra/aws.py:4:15: PW001 boto3.client() should be called at module scope
+  → handler.py:2:10 get_client()
+
+Found 1 violation in 1 file.
+```
+
+## Suppression
+
+### Inline suppression
+
+Append `# nopw: <code>` to a line to suppress that violation. Multiple codes can be comma-separated.
+
+```python
+client = boto3.client("s3")  # nopw: PW001
+```
+
+### File-level suppression
+
+Add `# pythaw: nocheck` in the leading comment block to skip the entire file.
+
+```python
+# pythaw: nocheck
+import boto3
+
+def handler(event, context):
+    boto3.client("s3")  # not checked
+```
+
+## Configuration
+
+Configure via the `[tool.pythaw]` section in `pyproject.toml`.
+
+```toml
+[tool.pythaw]
+# Function name patterns recognized as handlers (fnmatch syntax)
+handler_patterns = ["handler", "lambda_handler", "*_handler"]
+
+# Patterns to exclude from scanning
+exclude = [".venv", "tests"]
+
+# Disable specific rules per file pattern
+[tool.pythaw.per-file-ignores]
+"tests/*" = ["PW001", "PW002"]
+"scripts/*" = ["PW001"]
+```
+
+## License
+
+[MIT](LICENSE)

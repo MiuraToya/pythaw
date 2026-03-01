@@ -16,10 +16,7 @@ class GithubFormatter(Formatter):
             return ""
 
         lines = [
-            (
-                f"::error file={v.file},line={v.line},"
-                f"col={v.col}::{v.code} {v.message}"
-            )
+            (f"::error file={v.file},line={v.line},col={v.col}::{v.code} {v.message}")
             for v in violations
         ]
         return "\n".join(lines)

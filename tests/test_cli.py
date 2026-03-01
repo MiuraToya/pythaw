@@ -137,11 +137,7 @@ class TestFormatOption:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """--format json outputs valid JSON."""
-        source = (
-            "import boto3\n"
-            "def handler(event, context):\n"
-            '    boto3.client("s3")\n'
-        )
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
         _make_files(tmp_path, {"app.py": source})
         with (
             patch("pythaw.finder._git_ls_files", return_value=None),
@@ -157,17 +153,20 @@ class TestFormatOption:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """--format github outputs ::error annotations."""
-        source = (
-            "import boto3\n"
-            "def handler(event, context):\n"
-            '    boto3.client("s3")\n'
-        )
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
         _make_files(tmp_path, {"app.py": source})
         with (
             patch("pythaw.finder._git_ls_files", return_value=None),
             pytest.raises(SystemExit) as exc_info,
         ):
-            main(["check", str(tmp_path), "--format", "github"])
+            main(
+                [
+                    "check",
+                    str(tmp_path),
+                    "--format",
+                    "github",
+                ]
+            )
         assert exc_info.value.code == 1
         out = capsys.readouterr().out
         assert out.startswith("::error ")
@@ -176,17 +175,20 @@ class TestFormatOption:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """--format sarif outputs valid SARIF JSON."""
-        source = (
-            "import boto3\n"
-            "def handler(event, context):\n"
-            '    boto3.client("s3")\n'
-        )
+        source = 'import boto3\ndef handler(event, context):\n    boto3.client("s3")\n'
         _make_files(tmp_path, {"app.py": source})
         with (
             patch("pythaw.finder._git_ls_files", return_value=None),
             pytest.raises(SystemExit) as exc_info,
         ):
-            main(["check", str(tmp_path), "--format", "sarif"])
+            main(
+                [
+                    "check",
+                    str(tmp_path),
+                    "--format",
+                    "sarif",
+                ]
+            )
         assert exc_info.value.code == 1
         data = json.loads(capsys.readouterr().out)
         assert data["version"] == "2.1.0"

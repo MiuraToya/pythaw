@@ -90,9 +90,7 @@ SAMPLE_VIOLATIONS = [
         line=10,
         col=4,
         code="PW002",
-        message=(
-            "boto3.resource() should be called at module scope"
-        ),
+        message=("boto3.resource() should be called at module scope"),
     ),
 ]
 

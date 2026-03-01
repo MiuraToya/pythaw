@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import subprocess
 from fnmatch import fnmatch
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pythaw.config import Config
 
 

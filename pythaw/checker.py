@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import os
 from fnmatch import fnmatch
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from pythaw.finder import find_files
 from pythaw.rules import get_all_rules
@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
     from pythaw.config import Config
     from pythaw.rules._base import Rule
+
+FunctionNode: TypeAlias = ast.FunctionDef | ast.AsyncFunctionDef
 
 
 def check(path: Path, config: Config) -> list[Violation]:
@@ -44,7 +46,7 @@ def _parse_file(file: Path) -> ast.Module | None:
 def _extract_handlers(
     tree: ast.Module,
     patterns: tuple[str, ...],
-) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+) -> list[FunctionNode]:
     """Return top-level function nodes whose name matches *patterns*."""
     # Only inspect top-level nodes (iter_child_nodes does not recurse)
     # so that nested functions and class methods are excluded.
@@ -58,7 +60,7 @@ def _extract_handlers(
 
 def _check_function(
     file: Path,
-    func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    func_node: FunctionNode,
     rules: tuple[Rule, ...],
 ) -> list[Violation]:
     """Walk *func_node* and return violations for any matching Call nodes."""

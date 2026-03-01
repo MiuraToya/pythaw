@@ -41,9 +41,7 @@ class TestHandlerPatternMatching:
     ) -> None:
         """Default patterns match 'handler' and '*_handler' but not arbitrary names."""
         source = (
-            "import boto3\n"
-            f"def {func_name}(event, context):\n"
-            '    boto3.client("s3")\n'
+            f'import boto3\ndef {func_name}(event, context):\n    boto3.client("s3")\n'
         )
         _make_files(tmp_path, {"app.py": source})
         with patch("pythaw.finder._git_ls_files", return_value=None):
@@ -98,9 +96,7 @@ class TestHandlerPatternMatching:
     def test_async_handler(self, tmp_path: Path) -> None:
         """Async handler functions are also detected."""
         source = (
-            "import boto3\n"
-            "async def handler(event, context):\n"
-            "    boto3.client('s3')\n"
+            "import boto3\nasync def handler(event, context):\n    boto3.client('s3')\n"
         )
         _make_files(tmp_path, {"app.py": source})
         with patch("pythaw.finder._git_ls_files", return_value=None):
@@ -111,9 +107,7 @@ class TestHandlerPatternMatching:
         """A single file path is checked directly for handlers."""
         py = tmp_path / "app.py"
         py.write_text(
-            "import boto3\n"
-            "def handler(event, context):\n"
-            "    boto3.client('s3')\n"
+            "import boto3\ndef handler(event, context):\n    boto3.client('s3')\n"
         )
         violations = check(py, Config())
         assert len(violations) == 1

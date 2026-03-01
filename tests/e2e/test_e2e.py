@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
+SCENARIOS_DIR = Path(__file__).parent / "scenarios"
 
 
 def _run_pythaw(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -19,10 +19,10 @@ def _run_pythaw(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _use_fixture(name: str, tmp_path: Path) -> Path:
-    """Copy a fixture directory into *tmp_path* and return the copy path."""
+def _use_scenario(name: str, tmp_path: Path) -> Path:
+    """Copy a scenario directory into *tmp_path* and return the copy path."""
     dst = tmp_path / name
-    shutil.copytree(FIXTURES_DIR / name, dst)
+    shutil.copytree(SCENARIOS_DIR / name, dst)
     return dst
 
 
@@ -31,7 +31,7 @@ class TestCheckE2E:
 
     def test_detects_violation_and_exits_1(self, tmp_path: Path) -> None:
         """Violations produce concise output with relative paths and exit code 1."""
-        cwd = _use_fixture("violation", tmp_path)
+        cwd = _use_scenario("violation", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 1
         assert "PW001" in result.stdout
@@ -41,14 +41,14 @@ class TestCheckE2E:
 
     def test_clean_code_exits_0(self, tmp_path: Path) -> None:
         """No violations produce a success message and exit code 0."""
-        cwd = _use_fixture("clean", tmp_path)
+        cwd = _use_scenario("clean", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 0
         assert result.stdout == "All checks passed!\n"
 
     def test_multiple_violations_across_files(self, tmp_path: Path) -> None:
         """Multiple violations across files are all reported."""
-        cwd = _use_fixture("multi_violation", tmp_path)
+        cwd = _use_scenario("multi_violation", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 1
         assert "PW001" in result.stdout
@@ -108,26 +108,26 @@ class TestConfigE2E:
 
     def test_custom_patterns_ignore_default(self, tmp_path: Path) -> None:
         """Custom handler_patterns replaces defaults entirely."""
-        cwd = _use_fixture("custom_patterns_no_default", tmp_path)
+        cwd = _use_scenario("custom_patterns_no_default", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 0
 
     def test_exclude_filters_directory(self, tmp_path: Path) -> None:
         """Excluded directories are skipped during check."""
-        cwd = _use_fixture("exclude_dir", tmp_path)
+        cwd = _use_scenario("exclude_dir", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 0
 
     def test_invalid_toml_exits_2(self, tmp_path: Path) -> None:
         """Malformed pyproject.toml produces error and exit code 2."""
-        cwd = _use_fixture("invalid_toml", tmp_path)
+        cwd = _use_scenario("invalid_toml", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 2
         assert "Failed to read" in result.stderr
 
     def test_invalid_config_value_exits_2(self, tmp_path: Path) -> None:
         """Non-list handler_patterns produces error and exit code 2."""
-        cwd = _use_fixture("invalid_config_value", tmp_path)
+        cwd = _use_scenario("invalid_config_value", tmp_path)
         result = _run_pythaw("check", ".", cwd=cwd)
         assert result.returncode == 2
         assert "must be a list" in result.stderr

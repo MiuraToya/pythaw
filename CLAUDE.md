@@ -3,7 +3,7 @@
 ## プロジェクト概要
 
 pythaw は、AWS Lambda の Python ハンドラー内にある重い初期化処理を検出する静的解析 CLI ツール。
-詳細な仕様は [docs/spec.md](docs/spec.md)、技術設計は [docs/design.md](docs/design.md) を参照。
+詳細な仕様は [docs/spec.md](docs/spec.md)、アーキテクチャは [docs/adr/0001-architecture.md](docs/adr/0001-architecture.md) を参照。
 
 ## 期待する役割
 - 静的解析ツールのスペシャリストとして、ASTのベストプラクティスや一般的なアプローチを用いて設計・実装をサポートする。

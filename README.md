@@ -38,6 +38,26 @@ def lambda_handler(event, context):
     return client.get_object(Bucket="my-bucket", Key=event["key"])
 ```
 
+## Call Graph Tracking
+
+handler から呼び出されるローカル関数・クラスを再帰的に追跡し、間接的な違反も検出します。
+
+| パターン | 例 |
+|---------|---|
+| 同一ファイルの関数呼び出し | `helper()` |
+| モジュール経由の関数呼び出し | `infra.get_client()` |
+| クラスメソッド呼び出し | `AwsProvider.get_client()` |
+| クラスのインスタンス化 (`__init__`) | `S3Client()` |
+| import 先のファイルへの追跡 | `from infra import get_client` |
+
+```bash
+$ pythaw check handler.py
+infra/client.py:15:15: PW001 boto3.client() should be called at module scope
+  → handler.py:5:13 AwsProvider.get_client()
+```
+
+`→` 行は handler からの呼び出し経路（call chain）を示します。
+
 ## Rules
 
 | ID    | 検出対象 |

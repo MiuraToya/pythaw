@@ -1,6 +1,6 @@
 # pythaw
 
-AWS Lambda handler 内の重い初期化処理を検出する Python 静的解析ツール。
+AWS Lambda handler 内の重い初期化処理やコネクションを伴うリソース生成を検出する Python 静的解析ツール。
 
 ## Install
 
@@ -45,3 +45,9 @@ def lambda_handler(event, context):
 | PW001 | `boto3.client()` |
 | PW002 | `boto3.resource()` |
 | PW003 | `boto3.Session()` |
+| PW004 | `pymysql.connect()` |
+| PW005 | `psycopg2.connect()` |
+| PW006 | `redis.Redis()` |
+| PW007 | `redis.StrictRedis()` |
+| PW008 | `httpx.Client()` |
+| PW009 | `requests.Session()` |

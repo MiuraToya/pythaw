@@ -1,6 +1,6 @@
 [project]
 name = "pythaw"
-version = "0.2.0"
+version = "0.2.1"
 description = "A Python static analysis tool that detects heavy initialization inside AWS Lambda handlers that should be moved to module scope for faster warm starts."
 readme = "README.md"
 authors = [

@@ -1,7 +1,7 @@
 name: playground check
 
 on:
-  pull_request:
+  push:
     paths:
       - "playground/**"
 
@@ -18,11 +18,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
 
-      # github format → PR アノテーション表示
+      # github format — shows annotations in Actions log
       - name: Run pythaw (github format)
         run: uvx pythaw check --format github --exit-zero playground/
 
-      # sarif format → Code Scanning 連携
+      # sarif format — uploads to Code Scanning
       - name: Run pythaw (sarif format)
         run: uvx pythaw check --format sarif --exit-zero playground/ > results.sarif
 
@@ -30,6 +30,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
-          ref: ${{ github.head_ref }}
-          sha: ${{ github.event.pull_request.head.sha }}
         if: always()

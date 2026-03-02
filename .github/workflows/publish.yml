@@ -24,6 +24,6 @@ jobs:
       - name: Build package
         run: uv build
       - name: Smoke test
-        run: uv run --no-project -- pythaw --help
+        run: uvx --from dist/*.whl pythaw --help
       - name: Publish to PyPI
         run: uv publish --trusted-publishing always

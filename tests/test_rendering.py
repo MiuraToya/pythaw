@@ -33,9 +33,8 @@ class TestPrintViolations:
             Violation(file="app.py", line=3, col=4, code="PW001", message="test msg"),
         ]
         out = _capture(rendering.print_violations, violations)
-        assert "app.py:3:4:" in out
-        assert "PW001" in out
-        assert "test msg" in out
+        assert "PW001 test msg" in out
+        assert "--> app.py:3:4" in out
         assert "Found 1 violation in 1 file." in out
 
     def test_multiple_violations_plural(self) -> None:

@@ -37,7 +37,7 @@ class TestCheckE2E:
         assert "PW001" in result.stdout
         assert "boto3.client()" in result.stdout
         assert "Found 1 violation in 1 file." in result.stdout
-        assert result.stdout.startswith("app.py:")
+        assert result.stdout.startswith("PW001")
 
     def test_clean_code_exits_0(self, tmp_path: Path) -> None:
         """No violations produce a success message and exit code 0."""

@@ -2,9 +2,9 @@
 
 [日本語ドキュメント](README.ja.md)
 
-A Python static analysis tool that detects heavy initialization and connection-establishing resource creation inside AWS Lambda handlers.
+A Python static analysis tool that detects heavy initialization inside AWS Lambda handlers that should be moved to module scope for faster warm starts.
 
-It recursively follows function calls from handler functions—including across imported files—to catch indirect violations.
+Recursively follows function calls—including across imported files—to catch indirect violations.
 
 ## Requirements
 

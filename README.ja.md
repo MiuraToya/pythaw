@@ -1,8 +1,8 @@
 # pythaw
 
-AWS Lambda handler 内の重い初期化処理やコネクションを伴うリソース生成を検出する Python 静的解析ツール。
+AWS Lambda handler 内のモジュールスコープに移すべき重い初期化処理を検出する Python 静的解析ツール。
 
-ハンドラー関数からの関数呼び出しを再帰的に辿り、import 先のファイルも含めて検出する。
+ハンドラーからの関数呼び出しを再帰的に辿り、import 先も含めて間接的な違反を検出する。
 
 ## Requirements
 

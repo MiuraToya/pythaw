@@ -80,12 +80,8 @@ def _violation_to_diagnostic(violation: Violation) -> types.Diagnostic:
                 location=types.Location(
                     uri=Path(site.file).resolve().as_uri(),
                     range=types.Range(
-                        start=types.Position(
-                            line=site.line - 1, character=site.col
-                        ),
-                        end=types.Position(
-                            line=site.line - 1, character=site.col
-                        ),
+                        start=types.Position(line=site.line - 1, character=site.col),
+                        end=types.Position(line=site.line - 1, character=site.col),
                     ),
                 ),
                 message=f"called via {site.name}",

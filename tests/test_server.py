@@ -76,9 +76,7 @@ class TestViolationToDiagnostic:
             col=4,
             code="PW001",
             message="test",
-            call_chain=(
-                CallSite(file="app.py", line=3, col=4, name="helper()"),
-            ),
+            call_chain=(CallSite(file="app.py", line=3, col=4, name="helper()"),),
         )
         diag = _violation_to_diagnostic(violation)
 

@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from lsprotocol import types
+from pygls.lsp.server import LanguageServer
 
 from pythaw.cli import _build_parser
 from pythaw.lsp import (
-    PythawLanguageServer,
     _uri_to_path,
     _violation_to_diagnostic,
     create_server,
@@ -18,9 +18,9 @@ class TestCreateServer:
     """Verify LSP server factory function."""
 
     def test_returns_language_server_instance(self) -> None:
-        """create_server() returns a PythawLanguageServer."""
+        """create_server() returns a LanguageServer."""
         server = create_server()
-        assert isinstance(server, PythawLanguageServer)
+        assert isinstance(server, LanguageServer)
 
     def test_server_name(self) -> None:
         """Server name is 'pythaw'."""

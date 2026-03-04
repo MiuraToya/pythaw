@@ -14,27 +14,23 @@ if TYPE_CHECKING:
     from pythaw.violation import Violation
 
 
-class PythawLanguageServer(LanguageServer):
-    """LSP server for pythaw static analysis."""
-
-
-def create_server() -> PythawLanguageServer:
-    """Create and configure a PythawLanguageServer instance."""
-    server = PythawLanguageServer(
+def create_server() -> LanguageServer:
+    """Create and configure a pythaw LSP server."""
+    server = LanguageServer(
         name="pythaw",
         version="0.2.2",
     )
 
     @server.feature(types.TEXT_DOCUMENT_DID_OPEN)
     def did_open(
-        ls: PythawLanguageServer,
+        ls: LanguageServer,
         params: types.DidOpenTextDocumentParams,
     ) -> None:
         _validate(ls, params.text_document.uri)
 
     @server.feature(types.TEXT_DOCUMENT_DID_SAVE)
     def did_save(
-        ls: PythawLanguageServer,
+        ls: LanguageServer,
         params: types.DidSaveTextDocumentParams,
     ) -> None:
         _validate(ls, params.text_document.uri)
@@ -42,7 +38,7 @@ def create_server() -> PythawLanguageServer:
     return server
 
 
-def _validate(ls: PythawLanguageServer, uri: str) -> None:
+def _validate(ls: LanguageServer, uri: str) -> None:
     """Run pythaw check on the file and publish diagnostics."""
     path = _uri_to_path(uri)
     if path.suffix != ".py":

@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/pythaw)](https://pypi.org/project/pythaw/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pythaw)](https://pypi.org/project/pythaw/)
 [![License](https://img.shields.io/github/license/MiuraToya/pythaw)](https://github.com/MiuraToya/pythaw/blob/main/LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/MiuraToya/pythaw/ci.yml)](https://github.com/MiuraToya/pythaw/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/MiuraToya/pythaw/ci.yml?label=ci)](https://github.com/MiuraToya/pythaw/actions)
 
 [日本語ドキュメント](README.ja.md)
 

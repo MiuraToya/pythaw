@@ -338,11 +338,7 @@ class TestInlineSuppressionRecursive:
             "def handler(event, context):\n"
             "    make_client()  # nopw: PW001\n"
         )
-        helper_src = (
-            "import boto3\n"
-            "def make_client():\n"
-            '    return boto3.client("s3")\n'
-        )
+        helper_src = 'import boto3\ndef make_client():\n    return boto3.client("s3")\n'
         _make_files(tmp_path, {"app.py": handler_src, "helpers.py": helper_src})
         with patch("pythaw.finder._git_ls_files", return_value=None):
             violations = check(tmp_path, Config())
@@ -355,11 +351,7 @@ class TestInlineSuppressionRecursive:
             "def handler(event, context):\n"
             "    make_client()  # nopw: PW002\n"
         )
-        helper_src = (
-            "import boto3\n"
-            "def make_client():\n"
-            '    return boto3.client("s3")\n'
-        )
+        helper_src = 'import boto3\ndef make_client():\n    return boto3.client("s3")\n'
         _make_files(tmp_path, {"app.py": handler_src, "helpers.py": helper_src})
         with patch("pythaw.finder._git_ls_files", return_value=None):
             violations = check(tmp_path, Config())
@@ -391,11 +383,7 @@ class TestInlineSuppressionRecursive:
             "def handler(event, context):\n"
             "    make_client()\n"
         )
-        helper_src = (
-            "import boto3\n"
-            "def make_client():\n"
-            '    return boto3.client("s3")\n'
-        )
+        helper_src = 'import boto3\ndef make_client():\n    return boto3.client("s3")\n'
         _make_files(tmp_path, {"app.py": handler_src, "helpers.py": helper_src})
         with patch("pythaw.finder._git_ls_files", return_value=None):
             violations = check(tmp_path, Config())

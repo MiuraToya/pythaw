@@ -202,9 +202,7 @@ def _check_function(  # noqa: PLR0913
         )
 
         # Follow resolved local calls — skip if all rules are suppressed
-        unsuppressed_rules = tuple(
-            r for r in rules if r.code not in suppressed_codes
-        )
+        unsuppressed_rules = tuple(r for r in rules if r.code not in suppressed_codes)
         if unsuppressed_rules:
             _follow_call(
                 file,

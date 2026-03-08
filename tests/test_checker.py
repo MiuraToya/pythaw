@@ -328,6 +328,81 @@ class TestInlineSuppression:
         assert violations[0].line == 4
 
 
+class TestInlineSuppressionRecursive:
+    """Verify that nopw on a call site suppresses violations found recursively."""
+
+    def test_nopw_on_wrapper_suppresses_indirect(self, tmp_path: Path) -> None:
+        """A '# nopw: PW001' on a wrapper call suppresses violations inside it."""
+        handler_src = (
+            "from helpers import make_client\n"
+            "def handler(event, context):\n"
+            "    make_client()  # nopw: PW001\n"
+        )
+        helper_src = (
+            "import boto3\n"
+            "def make_client():\n"
+            '    return boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": handler_src, "helpers.py": helper_src})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+    def test_nopw_on_wrapper_only_specified_code(self, tmp_path: Path) -> None:
+        """Only the specified code is suppressed; other rules still fire."""
+        handler_src = (
+            "from helpers import make_client\n"
+            "def handler(event, context):\n"
+            "    make_client()  # nopw: PW002\n"
+        )
+        helper_src = (
+            "import boto3\n"
+            "def make_client():\n"
+            '    return boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": handler_src, "helpers.py": helper_src})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        assert violations[0].code == "PW001"
+
+    def test_nopw_on_wrapper_suppresses_multiple_codes(self, tmp_path: Path) -> None:
+        """Comma-separated codes suppress multiple rules through recursive calls."""
+        handler_src = (
+            "from helpers import setup\n"
+            "def handler(event, context):\n"
+            "    setup()  # nopw: PW001, PW002\n"
+        )
+        helper_src = (
+            "import boto3\n"
+            "def setup():\n"
+            '    boto3.client("s3")\n'
+            '    boto3.resource("dynamodb")\n'
+        )
+        _make_files(tmp_path, {"app.py": handler_src, "helpers.py": helper_src})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert violations == []
+
+    def test_without_nopw_wrapper_still_reports(self, tmp_path: Path) -> None:
+        """Without nopw, indirect violations are reported as usual."""
+        handler_src = (
+            "from helpers import make_client\n"
+            "def handler(event, context):\n"
+            "    make_client()\n"
+        )
+        helper_src = (
+            "import boto3\n"
+            "def make_client():\n"
+            '    return boto3.client("s3")\n'
+        )
+        _make_files(tmp_path, {"app.py": handler_src, "helpers.py": helper_src})
+        with patch("pythaw.finder._git_ls_files", return_value=None):
+            violations = check(tmp_path, Config())
+        assert len(violations) == 1
+        assert violations[0].code == "PW001"
+
+
 class TestFileLevelSuppression:
     """Verify file-level suppression with '# pythaw: nocheck' comment."""
 

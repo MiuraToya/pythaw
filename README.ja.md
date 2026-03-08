@@ -125,6 +125,12 @@ Found 1 violation in 1 file.
 client = boto3.client("s3")  # nopw: PW001
 ```
 
+ラッパー関数の呼び出しにも使える。再帰的に辿った先の違反も抑制される:
+
+```python
+client = make_client()  # nopw: PW001
+```
+
 ### ファイルレベル抑制
 
 ファイル先頭のコメントブロック内に `# pythaw: nocheck` と記述するとファイル全体をスキップする。

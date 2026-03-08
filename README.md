@@ -133,6 +133,12 @@ Append `# nopw: <code>` to a line to suppress that violation. Multiple codes can
 client = boto3.client("s3")  # nopw: PW001
 ```
 
+This also works on wrapper function calls — violations found recursively through the call are suppressed:
+
+```python
+client = make_client()  # nopw: PW001
+```
+
 ### File-level suppression
 
 Add `# pythaw: nocheck` in the leading comment block to skip the entire file.

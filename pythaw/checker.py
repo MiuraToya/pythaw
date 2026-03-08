@@ -201,16 +201,18 @@ def _check_function(  # noqa: PLR0913
             if rule.check(node) and rule.code not in suppressed_codes
         )
 
-        # Follow resolved local calls
-        _follow_call(
-            file,
-            node,
-            rules,
-            resolver,
-            chain,
-            visited,
-            violations,
-        )
+        # Follow resolved local calls — skip if all rules are suppressed
+        unsuppressed_rules = tuple(r for r in rules if r.code not in suppressed_codes)
+        if unsuppressed_rules:
+            _follow_call(
+                file,
+                node,
+                unsuppressed_rules,
+                resolver,
+                chain,
+                visited,
+                violations,
+            )
 
     return violations
 

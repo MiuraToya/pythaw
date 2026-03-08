@@ -86,6 +86,9 @@ def _build_parser() -> argparse.ArgumentParser:
     rule_p.add_argument("code", help="Rule code (e.g. PW001)")
     rule_p.set_defaults(func=_cmd_rule)
 
+    lsp_p = sub.add_parser("lsp", help="Start LSP server (stdio)")
+    lsp_p.set_defaults(func=_cmd_lsp)
+
     return parser
 
 
@@ -142,4 +145,12 @@ def _cmd_rule(args: argparse.Namespace) -> int:
         return 2
 
     print_rule_detail(rule)
+    return 0
+
+
+def _cmd_lsp(_args: argparse.Namespace) -> int:
+    from pythaw.lsp import create_server  # noqa: PLC0415
+
+    server = create_server()
+    server.start_io()
     return 0

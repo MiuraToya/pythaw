@@ -24,6 +24,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "pygls>=2.0.0",
     "rich>=14.0.0",
     "tomli>=2.0.0; python_version < '3.11'",
 ]
@@ -39,7 +40,7 @@ dev = [
     "mypy>=1.19.1",
     "pytest>=9.0.2",
     "pytest-cov>=6.2.1",
-
+    "pytest-lsp>=1.0.0",
     "ruff>=0.15.4",
 ]
 
